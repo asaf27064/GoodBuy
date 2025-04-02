@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-navigation/native": "^7.1.0",
     "axios": "^1.8.4",
+    "chalk": "^5.4.1",
     "expo": "~52.0.42",
     "expo-status-bar": "~2.0.1",
     "react": "18.3.1",
