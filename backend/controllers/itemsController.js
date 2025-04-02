@@ -1,6 +1,6 @@
 const Item = require('../models/item');
 
-exports.getItems = async (req, res) => {
+exports.getAllItems = async (req, res) => {
     try {
         const items = await Item.find();
         res.json(items);
@@ -42,6 +42,19 @@ exports.updateItem = async (req, res) => {
         if (!updatedItem) {
             return res.status(404).json({ error: 'Item not found' });
         }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+exports.getItemByID = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const item = await Item.findById(id);
+        if (!item) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+        res.json(item);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
