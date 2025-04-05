@@ -12,7 +12,7 @@ exports.getAllItems = async (req, res) => {
 
 exports.addItem = async (req, res) => {
     try {
-        const newItem = new Item({ name: req.body.name, quantity })
+        const newItem = new Item({ name: req.body.name, quantity: req.body.quantity })
         await newItem.save();
 
         await History.create({
@@ -56,24 +56,32 @@ exports.deleteItem = async (req, res) => {
 
 exports.updateItem = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { quantity } = req.body;
-        const updatedItem = await Item.findByIdAndUpdate(id, quantity, { new: true });
-        if (!updatedItem) {
-            return res.status(404).json({ error: 'Item not found' });
-        }
-
-        await History.create({
-            itemId: updatedItem._id,
-            action: 'updated',
-            changedBy: req.body.userId,
-            changeDetails: updateData,
-            timestamp: new Date()
-          });
+      const { id } = req.params;
+      const updateData = {
+        name: req.body.name,
+        quantity: req.body.quantity
+      };
+  
+      const updatedItem = await Item.findByIdAndUpdate(id, updateData, { new: true });
+      if (!updatedItem) {
+        return res.status(404).json({ error: 'Item not found' });
+      }
+  
+      await History.create({
+        itemId: updatedItem._id,
+        action: 'updated',
+        changedBy: req.body.userId,
+        changeDetails: updateData,
+        timestamp: new Date()
+      });
+  
+      res.json({ message: 'Item updated successfully', item: updatedItem });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+      console.error("Error updating item:", error);
+      res.status(500).json({ error: error.message });
     }
-}
+  };
+  
 
 exports.getItemByID = async (req, res) => {
     try {

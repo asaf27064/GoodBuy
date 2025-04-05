@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.get('/', itemsController.getAllItems);
 
-router.get('/:id', itemsController.getItemById);
+router.get('/:id', itemsController.getItemByID);
 
 router.post('/', itemsController.addItem);
 
