@@ -8,12 +8,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27017/shoppinglist', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+mongoose.connect('mongodb://localhost:27017/shoppinglist')
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error(err));
+
 
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
