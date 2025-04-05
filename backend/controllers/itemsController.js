@@ -23,6 +23,8 @@ exports.addItem = async (req, res) => {
             timestamp: new Date()
           });
 
+          global.io.emit('itemAdded', newItem);
+
         res.status(201).json(newItem);
     }
     
@@ -47,6 +49,8 @@ exports.deleteItem = async (req, res) => {
             changeDetails: deletedItem,
             timestamp: new Date()
           });
+          
+          global.io.emit('itemDeleted', deletedItem);
 
         res.json({ message: 'Item deleted successfully', item: deletedItem });
     } catch (error) {
@@ -74,6 +78,8 @@ exports.updateItem = async (req, res) => {
         changeDetails: updateData,
         timestamp: new Date()
       });
+
+      global.io.emit('itemEdited', updatedItem);
   
       res.json({ message: 'Item updated successfully', item: updatedItem });
     } catch (error) {
