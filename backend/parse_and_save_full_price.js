@@ -1,4 +1,3 @@
-// parse_and_save_full_price.js
 require('dotenv').config();
 const mongoose = require('mongoose');
 const fs       = require('fs').promises;
@@ -13,46 +12,38 @@ const PriceItem = require('./models/PriceItem');
 
 async function main() {
   const mongoUri = process.env.MONGO_URI;
-  if (!mongoUri) {
-    console.error('✖️ MONGO_URI not set');
-    process.exit(1);
-  }
-
+  if (!mongoUri) process.exit(1);
   await mongoose.connect(mongoUri);
   console.log('✅ Connected to MongoDB');
 
   // reuse parser
   const parser = new xml2js.Parser({ explicitArray: false });
 
-  // find xml files
+  // find all XMLs
   async function findXmlFiles(dir) {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     let files = [];
     for (const ent of entries) {
       const full = path.join(dir, ent.name);
-      if (ent.isDirectory()) {
-        files = files.concat(await findXmlFiles(full));
-      } else if (ent.isFile() && ent.name.toLowerCase().endsWith('.xml')) {
-        files.push(full);
-      }
+      if (ent.isDirectory()) files = files.concat(await findXmlFiles(full));
+      else if (ent.isFile() && ent.name.toLowerCase().endsWith('.xml')) files.push(full);
     }
     return files;
   }
 
-  const rootDir = path.join(__dirname, 'FullPriceXML');
-  const xmlPaths = await findXmlFiles(rootDir);
+  const xmlPaths = await findXmlFiles(path.join(__dirname, 'FullPriceXML'));
   console.log(`Found ${xmlPaths.length} files to process`);
 
-  // caches
   const chainCache = new Map();
   const storeCache = new Map();
   const fileCache  = new Map();
 
-  // process in parallel
+  // up to 8 in parallel
   const limit = pLimit(8);
-  const tasks = xmlPaths.map(p => limit(() => processFile(p, parser, chainCache, storeCache, fileCache)));
-  const results = await Promise.all(tasks);
-  const total = results.reduce((sum, n) => sum + n, 0);
+  const counts = await Promise.all(
+    xmlPaths.map(p => limit(() => processFile(p, parser, chainCache, storeCache, fileCache)))
+  );
+  const total = counts.reduce((sum, n) => sum + n, 0);
 
   console.log(`\n🏁 Done — processed total ${total} items`);
   await mongoose.disconnect();
@@ -61,38 +52,37 @@ async function main() {
 async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
   const xmlName = path.basename(xmlPath);
   try {
-    const xml = await fs.readFile(xmlPath, 'utf8');
+    const xml    = await fs.readFile(xmlPath, 'utf8');
     const parsed = await parser.parseStringPromise(xml);
+    const root   = parsed.Prices || parsed.Root || parsed.prices || parsed.root;
+    if (!root) throw new Error('Unrecognized XML');
 
-    // detect root
-    const root = parsed.Prices || parsed.Root || parsed.prices || parsed.root;
-    if (!root) throw new Error('Unrecognized XML structure');
-
-    // extract IDs
-    const chainIdRaw   = root.ChainID   || root.ChainId   || root.chainid;
-    const subChainIdRaw= root.SubChainID|| root.SubChainId|| root.subchainid;
-    const storeIdRaw   = root.StoreID   || root.StoreId   || root.storeid;
+    // IDs
+    const chainIdRaw    = root.ChainID   || root.ChainId   || root.chainid;
+    const subChainIdRaw = root.SubChainID|| root.SubChainId|| root.subchainid;
+    const storeIdRaw    = root.StoreID   || root.StoreId   || root.storeid;
     if (!chainIdRaw || !storeIdRaw) throw new Error('Missing chainId or storeId');
-    const chainId    = String(chainIdRaw);
-    let subChainId   = String(subChainIdRaw || '');
-    let storeId      = String(storeIdRaw);
 
-    // normalize numeric (strip leading zeros)
+    const chainId  = String(chainIdRaw);
+    let   subChainId = String(subChainIdRaw || '');
+    let   storeId    = String(storeIdRaw);
+    // strip leading zeros
     subChainId = parseInt(subChainId, 10).toString();
-    storeId    = parseInt(storeId, 10).toString();
+    storeId    = parseInt(storeId,    10).toString();
 
-    // chain lookup
-    let chainRef;
+    // Chain lookup & caching
+    let chainDoc;
     if (chainCache.has(chainId)) {
-      chainRef = chainCache.get(chainId);
+      chainDoc = chainCache.get(chainId);
     } else {
-      const chainDoc = await Chain.findOne({ chainId }).lean();
+      chainDoc = await Chain.findOne({ chainId }).lean();
       if (!chainDoc) throw new Error(`Chain ${chainId} not found`);
-      chainRef = chainDoc._id;
-      chainCache.set(chainId, chainRef);
+      chainCache.set(chainId, chainDoc);
     }
+    const chainRef  = chainDoc._id;
+    const chainName = chainDoc.chainName;
 
-    // store lookup
+    // Store lookup & caching
     const storeKey = `${chainRef}_${subChainId}_${storeId}`;
     let storeRef;
     if (storeCache.has(storeKey)) {
@@ -112,14 +102,11 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
       storeCache.set(storeKey, storeRef);
     }
 
-    // upsert PriceFile
+    // PriceFile upsert & caching
     let priceFileId;
     if (fileCache.has(storeRef)) {
       priceFileId = fileCache.get(storeRef);
-      await PriceFile.updateOne(
-        { _id: priceFileId },
-        { $set: { fileName: xmlName, fetchedAt: new Date() } }
-      );
+      await PriceFile.updateOne({ _id: priceFileId }, { $set: { fileName: xmlName, fetchedAt: new Date() } });
     } else {
       const fileDoc = await PriceFile.findOneAndUpdate(
         { storeRef },
@@ -130,16 +117,21 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
       fileCache.set(storeRef, priceFileId);
     }
 
-    // extract items
+    // items array
     let items = root.Products?.Product || root.Items?.Item || root.products?.product;
     if (!items) return 0;
     if (!Array.isArray(items)) items = [items];
 
-    // bulk upsert
+    // bulk upsert items with chain info
     const ops = items.map(it => ({
       updateOne: {
         filter: { priceFile: priceFileId, itemCode: it.ItemCode },
         update: { $set: {
+          // newly denormalized fields:
+          chainId,
+          chainName,
+
+          // existing price item fields:
           priceUpdateDate:    it.PriceUpdateDate || it.PriceUpdateTime || null,
           lastSaleDateTime:   it.LastSaleDateTime || null,
           itemType:           Number(it.ItemType) || 0,
@@ -172,7 +164,4 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
   }
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch(err => { console.error(err); process.exit(1); });

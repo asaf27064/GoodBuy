@@ -1,42 +1,34 @@
-// models/PriceItem.js
 const mongoose = require('mongoose');
 
 const PriceItemSchema = new mongoose.Schema({
-  // Reference to the PriceFile
-  priceFile:          { type: mongoose.Types.ObjectId, ref: 'PriceFile', required: true, index: true },
+  priceFile:            { type: mongoose.Types.ObjectId, ref: 'PriceFile', required: true, index: true },
+  itemCode:             { type: String, required: true, index: true },
 
-  // SKU identifier
-  itemCode:           { type: String, required: true, index: true },
+  // Denormalized chain info for fast lookups:
+  chainId:              { type: String, required: true, index: true },
+  chainName:            { type: String, required: true },
 
-  // Pricing & metadata
-  priceUpdateDate:    { type: Date },
-  lastSaleDateTime:   { type: Date },
-  itemType:           { type: Number },
-  itemName:           { type: String },
-  manufacturerName:   { type: String },
-  manufactureCountry: { type: String },
-  itemDescription:    { type: String },
-  unitQty:            { type: String },
-  quantity:           { type: Number },
-  unitOfMeasure:      { type: String },
-  isWeighted:         { type: Boolean },
-  qtyInPackage:       { type: Number },
-  itemPrice:          { type: Number, index: true },
-  unitOfMeasurePrice: { type: Number },
-  allowDiscount:      { type: Boolean },
-  itemStatus:         { type: Number },
-
-  // Unique item identifier (optional)
-  itemId:             { type: String },
-
-  // Image URL for this SKU
-  imageUrl:           { type: String }
+  priceUpdateDate:      { type: Date },
+  lastSaleDateTime:     { type: Date },
+  itemType:             { type: Number },
+  itemName:             { type: String },
+  manufacturerName:     { type: String },
+  manufactureCountry:   { type: String },
+  itemDescription:      { type: String },
+  unitQty:              { type: String },
+  quantity:             { type: Number },
+  unitOfMeasure:        { type: String },
+  isWeighted:           { type: Boolean },
+  qtyInPackage:         { type: Number },
+  itemPrice:            { type: Number, index: true },
+  unitOfMeasurePrice:   { type: Number },
+  allowDiscount:        { type: Boolean },
+  itemStatus:           { type: Number },
+  itemId:               { type: String },
+  imageUrl:             { type: String }
 }, { timestamps: true });
 
-// Composite unique index to prevent duplicate items in the same file
-PriceItemSchema.index(
-  { priceFile: 1, itemCode: 1 },
-  { unique: true }
-);
+// Compound index to support fast distinct/filter by SKU and chain
+PriceItemSchema.index({ itemCode: 1, chainId: 1 });
 
 module.exports = mongoose.model('PriceItem', PriceItemSchema);
