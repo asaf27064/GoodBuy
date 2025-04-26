@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <ChainId>7290027600007</ChainId>
+  <SubChainId>005</SubChainId>
+  <StoreId>683</StoreId>
+  <BikoretNo>7</BikoretNo>
+  <DllVerNo>8.0.1.3</DllVerNo>
+  <Items Count="3">
+    <Item>
+      <PriceUpdateDate>2019-02-08 05:38</PriceUpdateDate>
+      <ItemCode>6251921000073</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>צמיד סברובסקי יח'</ItemName>
+      <ManufacturerName>כללי</ManufacturerName>
+      <ManufactureCountry>IL</ManufactureCountry>
+      <ManufacturerItemDescription>צמיד סברובסקי</ManufacturerItemDescription>
+      <UnitQty>יחידה</UnitQty>
+      <Quantity>1.00</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <UnitOfMeasure>יחידה</UnitOfMeasure>
+      <QtyInPackage>1</QtyInPackage>
+      <ItemPrice>129.00</ItemPrice>
+      <UnitOfMeasurePrice>129.00</UnitOfMeasurePrice>
+      <AllowDiscount>1</AllowDiscount>
+      <ItemStatus>1</ItemStatus>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2024-12-31 13:06</PriceUpdateDate>
+      <ItemCode>7290019019671</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>רוז וולווט אדפ אישה 75מל</ItemName>
+      <ManufacturerName>ספרינג אווירה וריח בע"מ</ManufacturerName>
+      <ManufactureCountry>IL</ManufactureCountry>
+      <ManufacturerItemDescription>רוז וולווט אדפ א</ManufacturerItemDescription>
+      <UnitQty>מיליליטרים</UnitQty>
+      <Quantity>75.00</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <UnitOfMeasure>100 מ"ל</UnitOfMeasure>
+      <QtyInPackage>1</QtyInPackage>
+      <ItemPrice>152.00</ItemPrice>
+      <UnitOfMeasurePrice>202.67</UnitOfMeasurePrice>
+      <AllowDiscount>1</AllowDiscount>
+      <ItemStatus>1</ItemStatus>
+    </Item>
+    <Item>
+      <PriceUpdateDate>2024-12-31 11:23</PriceUpdateDate>
+      <ItemCode>856591000574</ItemCode>
+      <ItemType>1</ItemType>
+      <ItemName>מיני נשנוש טבעי 40 גרם</ItemName>
+      <ManufacturerName>מאפיית יוסף ושמחה עבאדי</ManufacturerName>
+      <ManufactureCountry>IL</ManufactureCountry>
+      <ManufacturerItemDescription>מיני נשנוש טבעי 40 גרם</ManufacturerItemDescription>
+      <UnitQty>גרמים</UnitQty>
+      <Quantity>40.00</Quantity>
+      <bIsWeighted>0</bIsWeighted>
+      <UnitOfMeasure>100 גרם</UnitOfMeasure>
+      <QtyInPackage>1</QtyInPackage>
+      <ItemPrice>5.00</ItemPrice>
+      <UnitOfMeasurePrice>12.50</UnitOfMeasurePrice>
+      <AllowDiscount>1</AllowDiscount>
+      <ItemStatus>1</ItemStatus>
+    </Item>
+  </Items>
+</root>

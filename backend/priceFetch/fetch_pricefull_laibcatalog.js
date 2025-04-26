@@ -10,7 +10,7 @@ const fs        = require('fs');
 const path      = require('path');
 
 const BASE_URL          = 'https://laibcatalog.co.il/';
-const DOWNLOAD_DIR      = path.join(__dirname, 'downloads_pricefull');
+const DOWNLOAD_DIR      = path.join(__dirname, 'FullPriceDownloads');
 const SUCCESS_LIST_PATH = path.join(__dirname, 'success_pricefull_laibcatalog.json');
 
 // שלוש הרשתות עם ה־chainId הקבוע
