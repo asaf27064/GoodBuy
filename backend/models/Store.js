@@ -1,4 +1,3 @@
-// models/Store.js
 const mongoose = require('mongoose');
 
 const StoreSchema = new mongoose.Schema({
@@ -18,13 +17,11 @@ const StoreSchema = new mongoose.Schema({
   longitude:   { type: Number }
 }, { timestamps: true });
 
-// Composite unique index to prevent duplicate store entries per chain
 StoreSchema.index(
   { chainRef: 1, subChainId: 1, storeId: 1 },
   { unique: true }
 );
 
-// GeoJSON field for geospatial queries
 StoreSchema.add({
   location: {
     type: {
@@ -39,7 +36,6 @@ StoreSchema.add({
   }
 });
 
-// 2dsphere index on location for geospatial queries
 StoreSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Store', StoreSchema);
