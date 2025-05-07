@@ -1,165 +1,164 @@
-const puppeteer = require('puppeteer');
-const axios     = require('axios');
-const fs        = require('fs');
-const path      = require('path');
-const pLimit    = require('p-limit').default;
+const puppeteer = require('puppeteer')
+const axios     = require('axios')
+const fs        = require('fs')
+const path      = require('path')
+const { Client } = require('basic-ftp')
 
-const DOWNLOAD_DIR = path.join(__dirname, 'Downloads');
-const RETAILER_CONCURRENCY = 4;
-const DOWNLOAD_CONCURRENCY = 8;
-const MAX_RETRIES = 2;
-const delay = ms => new Promise(res => setTimeout(res, ms));
+const DOWNLOAD_DIR = path.join(__dirname, 'Downloads')
+const mode = process.argv[2] === 'update' ? 'update' : 'init'
+console.log(`📦 Running in ${mode.toUpperCase()} mode`)
 
-const mode = process.argv[2] === 'update' ? 'update' : 'init';
-console.log(`📦 Running in mode: ${mode === 'update' ? 'UPDATE (Prices/Price)' : 'INIT (PriceFull)'}`);
+if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true })
+const allRetailers = require('./retailers.json')
 
-if (!fs.existsSync(DOWNLOAD_DIR)) {
-  fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
-}
+const ftpRetailers = allRetailers.filter(r => r.ftp)
+const webRetailers = allRetailers.filter(r => r.url && r.url.includes('url.publishedprices.co.il'))
 
-const allRetailers = require('./retailers.json');
-const retailers    = allRetailers.filter(r => r.url.includes('url.publishedprices.co.il'));
+;(async () => {
+  const defaultBrowser = await puppeteer.launch({ headless: true })
 
-const successRetailers = [];
-const emptyRetailers = [];
+  for (const entry of webRetailers) {
+    console.log(`\n🔐 ${entry.name}`)
+    await handleWeb(entry, defaultBrowser)
+  }
+  await defaultBrowser.close()
 
-(async () => {
-  const retailerLimit = pLimit(RETAILER_CONCURRENCY);
-  await Promise.all(
-    retailers.map(entry => retailerLimit(() => runRetailerWithRetries(entry)))
-  );
-
-  console.log('\n📋 Summary:');
-  console.log(`✅ Successful downloads from ${successRetailers.length} retailers.`);
-  console.log(`❌ No files found in ${emptyRetailers.length} retailers.`);
-
-  if (successRetailers.length > 0) {
-    console.log('\n✅ Retailers with files:');
-    successRetailers.forEach(name => console.log(`- ${name}`));
+  for (const entry of ftpRetailers) {
+    console.log(`\n🔌 FTP ${entry.name}`)
+    await handleFtp(entry)
   }
 
-  if (emptyRetailers.length > 0) {
-    console.log('\n❌ Retailers with no files:');
-    emptyRetailers.forEach(name => console.log(`- ${name}`));
-  }
-})();
+  console.log('\n✅ All done')
+})()
 
-async function runRetailerWithRetries(entry) {
-  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-    const success = await handleRetailer(entry);
-    if (success) return;
-    await delay(3000);
-  }
-  emptyRetailers.push(entry.name);
-}
-
-async function handleRetailer(entry) {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-
+async function handleWeb(entry, browser) {
+  const page = await browser.newPage()
   try {
-    await page.goto(entry.url, { waitUntil: 'domcontentloaded', timeout: 300000 });
-
-    await page.type('#username', entry.login.username);
-    if (entry.login.password) {
-      await page.type('#password', entry.login.password);
-    }
-
+    await page.goto(entry.url, { waitUntil: 'networkidle2' })
+    await page.type('#username', entry.login.username)
+    if (entry.login.password) await page.type('#password', entry.login.password)
     await Promise.all([
       page.click('button[type="submit"], input[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 300000 })
-    ]);
+      page.waitForNavigation({ waitUntil: 'networkidle2' })
+    ])
+    const isDorAlon = entry.name.includes('דור אלון')
+    const selectorTimeout = isDorAlon ? 90000 : 30000
+    await page.waitForSelector('#fileList tbody tr', { timeout: selectorTimeout })
 
-    const found = await page.waitForSelector('a[href$=".gz"]', { timeout: 60000 }).catch(() => null);
-    if (!found) {
-      await page.close();
-      await browser.close();
-      return false;
+    let raw
+    if (isDorAlon) {
+      const html = await page.content()
+      raw = []
+      const gzRe = /href="([^\"]+\.gz)"/g
+      let m
+      while ((m = gzRe.exec(html))) {
+        raw.push(new URL(m[1], page.url()).href)
+      }
+    } else {
+      raw = await page.$$eval(
+        '#fileList tbody tr a.f',
+        els => els.map(a => a.href || a.getAttribute('href'))
+      )
     }
 
-    const rawHrefs = await page.$$eval(
-      'a[href$=".gz"]',
-      els => els.map(a => a.href || a.getAttribute('href'))
-    );
-
-    const gzLinks = rawHrefs
+    const links = raw
       .map(h => new URL(h, page.url()).href)
-      .filter(h => {
-        const name = path.basename(h).toLowerCase();
-        if (mode === 'init') {
-          return name.startsWith('pricefull') && name.endsWith('.gz');
-        } else {
-          return (name.startsWith('prices') || (name.startsWith('price') && !name.startsWith('pricefull'))) && name.endsWith('.gz');
-        }
-      });
-
-    if (gzLinks.length === 0) {
-      await page.close();
-      await browser.close();
-      return false;
+      .filter(h => matchMode(path.basename(h).toLowerCase()))
+    if (!links.length) {
+      console.warn(`   ⚠️ No matching files for ${entry.name}`)
+      return
     }
 
-    const files = gzLinks.map(link => {
-      const name = path.basename(link.split('?')[0]);
-      let m, storeId, ts;
+    const files = links.map(parseFilename).filter(Boolean)
+    const newest = pickNewest(files)
+    const shopDir = path.join(
+      DOWNLOAD_DIR,
+      entry.name.replace(/[\\/:"*?<>|]/g, '')
+    )
+    if (!fs.existsSync(shopDir)) fs.mkdirSync(shopDir, { recursive: true })
 
-      m = name.match(/(?:PriceFull|Prices|Price)\d+-\d+-([0-9]+)-(\d{8})-(\d{6})\.gz$/i);
-      if (m) {
-        storeId = m[1];
-        ts      = m[2] + m[3];
-      } else {
-        m = name.match(/(?:PriceFull|Prices|Price)\d+-([0-9]+)-(\d{12})\.gz$/i);
-        if (m) {
-          storeId = m[1];
-          const dt = m[2];
-          ts       = dt.slice(0,8) + dt.slice(8,12) + '00';
-        } else {
-          return null;
-        }
-      }
-
-      return { link, name, storeId, ts };
-    }).filter(Boolean);
-
-    const newest = {};
-    for (const f of files) {
-      if (!newest[f.storeId] || f.ts > newest[f.storeId].ts) {
-        newest[f.storeId] = f;
-      }
+    const cookies = await page.cookies()
+    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ')
+    for (const f of Object.values(newest)) {
+      const out = path.join(shopDir, f.name)
+      if (fs.existsSync(out)) continue
+      console.log(`   ⬇️  ${f.name}`)
+      const res = await axios.get(f.link, {
+        responseType: 'stream', timeout: 60000, decompress: false,
+        headers: { Cookie: cookieHeader, 'Accept-Encoding': 'identity' }
+      })
+      const ws = fs.createWriteStream(out)
+      res.data.pipe(ws)
+      await new Promise((r, e) => ws.on('finish', r).on('error', e))
+      console.log(`     ✔️ Saved to ${out}`)
     }
-
-    const downloadLimit = pLimit(DOWNLOAD_CONCURRENCY);
-    const cookieHeader = (await page.cookies()).map(c => `${c.name}=${c.value}`).join('; ');
-
-    await Promise.all(Object.values(newest).map(file => downloadLimit(async () => {
-      const outPath = path.join(DOWNLOAD_DIR, file.name);
-      if (fs.existsSync(outPath)) return;
-
-      try {
-        const resp = await axios.get(file.link, {
-          responseType    : 'stream',
-          timeout         : 120000,
-          decompress      : false,
-          headers         : {
-            Cookie           : cookieHeader,
-            'Accept-Encoding': 'identity'
-          }
-        });
-        const ws = fs.createWriteStream(outPath);
-        resp.data.pipe(ws);
-        await new Promise((res, rej) => ws.on('finish', res).on('error', rej));
-      } catch (_) {
-      }
-    })));
-
-    successRetailers.push(entry.name);
-    await page.close();
-    await browser.close();
-    return true;
-
-  } catch (_) {
-    try { await page.close(); } catch {}
-    await browser.close();
-    return false;
+  } catch (err) {
+    console.error(`   ❌ ${entry.name}: ${err.message}`)
+  } finally {
+    await page.close()
   }
+}
+
+async function handleFtp(entry) {
+  const client = new Client()
+  try {
+    await client.access({
+      host: process.env.PRICE_HOST || 'publishedprices.co.il',
+      user: entry.login.username,
+      password: entry.login.password || '',
+      secure: process.env.USE_TLS !== '0'
+    })
+    const all = []
+    async function walk(dir) {
+      for (const f of await client.list(dir)) {
+        const p = path.posix.join(dir, f.name)
+        if (f.isDirectory) await walk(p)
+        else if (p.endsWith('.gz')) all.push(p)
+      }
+    }
+    await walk('/')
+    await client.close()
+
+    const filtered = all.filter(p => matchMode(path.basename(p).toLowerCase()))
+    if (!filtered.length) {
+      console.warn(`   ⚠️ No matching FTP files for ${entry.name}`)
+      return
+    }
+
+    const parsed = filtered.map(remote => { const obj = parseFilename(remote); obj.remote = remote; return obj }).filter(Boolean)
+    const newest = pickNewest(parsed)
+    const shopDir = path.join(DOWNLOAD_DIR, entry.name.replace(/[\\/:"*?<>|]/g, ''))
+    if (!fs.existsSync(shopDir)) fs.mkdirSync(shopDir, { recursive: true })
+
+    for (const f of Object.values(newest)) {
+      const local = path.join(shopDir, f.name)
+      if (fs.existsSync(local)) continue
+      console.log(`   ⬇️  FTP ${f.name}`)
+      const c2 = new Client()
+      await c2.access({ host: process.env.PRICE_HOST || 'publishedprices.co.il', user: entry.login.username, password: entry.login.password || '', secure: process.env.USE_TLS !== '0' })
+      await fs.promises.mkdir(path.dirname(local), { recursive: true })
+      await c2.downloadTo(local, f.remote)
+      await c2.close()
+      console.log(`     ✔️ Saved FTP to ${local}`)
+    }
+  } catch (err) {
+    console.error(`   ❌ FTP ${entry.name}: ${err.message}`)
+    client.close()
+  }
+}
+
+function matchMode(name) {
+  if (mode === 'init') return /^pricefull.*\.gz$/.test(name)
+  return (/^prices.*\.gz$/.test(name) || (/^price.*\.gz$/.test(name) && !/^pricefull/.test(name)))
+}
+function parseFilename(link) {
+  const name = path.basename(link.split('?')[0])
+  let m = name.match(/(?:PriceFull|Prices|Price)\d+-\d+-([0-9]+)-(\d{8})-(\d{6})\.gz$/i)
+  let storeId, ts
+  if (m) { storeId = m[1]; ts = m[2] + m[3] } 
+  else { m = name.match(/(?:PriceFull|Prices|Price)\d+-([0-9]+)-(\d{12})\.gz$/i); if (m) { storeId = m[1]; const dt = m[2]; ts = dt.slice(0,8)+dt.slice(8,12)+'00' } else return null }
+  return { link, name, storeId, ts }
+}
+function pickNewest(arr) {
+  return arr.reduce((map,f) => { if (!map[f.storeId] || f.ts > map[f.storeId].ts) map[f.storeId] = f; return map }, {})
 }

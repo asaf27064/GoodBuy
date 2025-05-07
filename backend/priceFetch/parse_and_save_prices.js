@@ -9,60 +9,72 @@ const PriceFile = require('../models/PriceFile');
 const PriceItem = require('../models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-
 async function main() {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) process.exit(1);
   await mongoose.connect(mongoUri);
   console.log('✅ Connected to MongoDB');
 
-  // reuse parser
   const parser = new xml2js.Parser({ explicitArray: false });
 
-  // find all XMLs
   async function findXmlFiles(dir) {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     let files = [];
     for (const ent of entries) {
       const full = path.join(dir, ent.name);
-      if (ent.isDirectory()) files = files.concat(await findXmlFiles(full));
-      else if (ent.isFile() && ent.name.toLowerCase().endsWith('.xml')) files.push(full);
+      if (ent.isDirectory()) {
+        files = files.concat(await findXmlFiles(full));
+      } else if (ent.isFile() && ent.name.toLowerCase().endsWith('.xml')) {
+        files.push(full);
+      }
     }
     return files;
   }
 
   const xmlPaths = await findXmlFiles(path.join(__dirname, 'Downloads'));
-  console.log(`Found ${xmlPaths.length} files to process`);
+  console.log(`📦 Found ${xmlPaths.length} files to process`);
 
-  const chainCache = new Map();
+  // Preload and cache all chains and stores
+  const allChains = await Chain.find().lean();
+  const allStores = await Store.find().lean();
+  const chainCache = new Map(allChains.map(c => [c.chainId, c]));
   const storeCache = new Map();
-  const fileCache  = new Map();
+  for (const s of allStores) {
+    const key = `${s.chainRef}_${s.subChainId}_${s.storeId}`;
+    storeCache.set(key, s._id);
+  }
 
-  // up to 8 in parallel
+  const fileCache = new Map();
   const limit = pLimit(8);
-  const counts = await Promise.all(
-    xmlPaths.map(p => limit(() => processFile(p, parser, chainCache, storeCache, fileCache)))
-  );
-  const total = counts.reduce((sum, n) => sum + n, 0);
+  const batchSize = 20;
+  let total = 0;
+
+  for (let i = 0; i < xmlPaths.length; i += batchSize) {
+    const batch = xmlPaths.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(p => limit(() => processFile(p, parser, chainCache, storeCache, fileCache)))
+    );
+    const sum = results.reduce((a, b) => a + b, 0);
+    total += sum;
+    console.log(`✅ Batch ${i / batchSize + 1} done: ${sum} items`);
+  }
 
   console.log(`\n🏁 Done — processed total ${total} items`);
-
   console.log('🔄 Syncing images from Drive + fetching missing from CHP…');
   const syncImages = require('./sync_and_update_images');
   await syncImages();
-
   await mongoose.disconnect();
 }
 
 async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
   const xmlName = path.basename(xmlPath);
+  const t0 = Date.now();
   try {
     const xml    = await fs.readFile(xmlPath, 'utf8');
     const parsed = await parser.parseStringPromise(xml);
     const root   = parsed.Prices || parsed.Root || parsed.prices || parsed.root;
     if (!root) throw new Error('Unrecognized XML');
 
-    // IDs
     const chainIdRaw    = root.ChainID   || root.ChainId   || root.chainid;
     const subChainIdRaw = root.SubChainID|| root.SubChainId|| root.subchainid;
     const storeIdRaw    = root.StoreID   || root.StoreId   || root.storeid;
@@ -71,47 +83,46 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
     const chainId  = String(chainIdRaw);
     let   subChainId = String(subChainIdRaw || '');
     let   storeId    = String(storeIdRaw);
-    // strip leading zeros
     subChainId = parseInt(subChainId, 10).toString();
     storeId    = parseInt(storeId,    10).toString();
 
-    // Chain lookup & caching
-    let chainDoc;
-    if (chainCache.has(chainId)) {
-      chainDoc = chainCache.get(chainId);
-    } else {
-      chainDoc = await Chain.findOne({ chainId }).lean();
-      if (!chainDoc) throw new Error(`Chain ${chainId} not found`);
-      chainCache.set(chainId, chainDoc);
-    }
+    const chainDoc = chainCache.get(chainId);
+    if (!chainDoc) throw new Error(`Chain ${chainId} not found`);
     const chainRef  = chainDoc._id;
     const chainName = chainDoc.chainName;
 
-    // Store lookup & caching
-    const storeKey = `${chainRef}_${subChainId}_${storeId}`;
-    let storeRef;
-    if (storeCache.has(storeKey)) {
-      storeRef = storeCache.get(storeKey);
-    } else {
-      let storeDoc = await Store.findOne({ chainRef, subChainId, storeId }).lean();
-      if (!storeDoc) {
-        // fallback: ignore subChain
-        storeDoc = await Store.findOne({ chainRef, storeId }).lean();
-        if (storeDoc) {
-          console.warn(`⚠️ Fallback matched store for ${xmlName}: using subChainId=${storeDoc.subChainId}`);
-          subChainId = storeDoc.subChainId;
-        }
+    let storeRef = storeCache.get(`${chainRef}_${subChainId}_${storeId}`);
+    if (!storeRef) {
+      const fallbackKey = Array.from(storeCache.entries()).find(([k, v]) =>
+        k.startsWith(`${chainRef}_`) && k.endsWith(`_${storeId}`)
+      );
+      if (fallbackKey) {
+        storeRef = fallbackKey[1];
+        subChainId = fallbackKey[0].split('_')[1];
+        console.warn(`⚠️ Fallback matched store for ${xmlName}: using subChainId=${subChainId}`);
       }
-      if (!storeDoc) throw new Error(`Store ${chainId}/${subChainId}/${storeId} not found`);
-      storeRef = storeDoc._id;
-      storeCache.set(storeKey, storeRef);
+    }
+    if (!storeRef) throw new Error(`Store ${chainId}/${subChainId}/${storeId} not found`);
+
+    let existingFile = null;
+    if (fileCache.has(storeRef)) {
+      existingFile = await PriceFile.findById(fileCache.get(storeRef)).lean();
+    } else {
+      existingFile = await PriceFile.findOne({ storeRef }).lean();
+      if (existingFile) fileCache.set(storeRef, existingFile._id);
+    }
+    if (existingFile && existingFile.fileName === xmlName) {
+      console.log(`⏭️ Skipping ${xmlName} — already processed`);
+      return 0;
     }
 
-    // PriceFile upsert & caching
     let priceFileId;
-    if (fileCache.has(storeRef)) {
-      priceFileId = fileCache.get(storeRef);
-      await PriceFile.updateOne({ _id: priceFileId }, { $set: { fileName: xmlName, fetchedAt: new Date() } });
+    if (existingFile) {
+      priceFileId = existingFile._id;
+      await PriceFile.updateOne(
+        { _id: priceFileId },
+        { $set: { fileName: xmlName, fetchedAt: new Date() } }
+      );
     } else {
       const fileDoc = await PriceFile.findOneAndUpdate(
         { storeRef },
@@ -122,21 +133,15 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
       fileCache.set(storeRef, priceFileId);
     }
 
-    // items array
     let items = root.Products?.Product || root.Items?.Item || root.products?.product;
     if (!items) return 0;
     if (!Array.isArray(items)) items = [items];
 
-    // bulk upsert items with chain info
     const ops = items.map(it => ({
       updateOne: {
         filter: { priceFile: priceFileId, itemCode: it.ItemCode },
         update: { $set: {
-          // newly denormalized fields:
-          chainId,
-          chainName,
-
-          // existing price item fields:
+          chainId, chainName,
           priceUpdateDate:    it.PriceUpdateDate || it.PriceUpdateTime || null,
           lastSaleDateTime:   it.LastSaleDateTime || null,
           itemType:           Number(it.ItemType) || 0,
@@ -153,14 +158,18 @@ async function processFile(xmlPath, parser, chainCache, storeCache, fileCache) {
           unitOfMeasurePrice: parseFloat(it.UnitOfMeasurePrice) || 0,
           allowDiscount:      ['1','true'].includes(String(it.AllowDiscount).toLowerCase()),
           itemStatus:         Number(it.ItemStatus) || 0,
-          itemId:             it.ItemId || null,
+          itemId:             it.ItemId || null
         }},
         upsert: true
       }
     }));
 
-    if (ops.length) await PriceItem.bulkWrite(ops);
-    console.log(`➕ ${xmlName}: ${items.length} items`);
+    const chunkSize = 500;
+    for (let i = 0; i < ops.length; i += chunkSize) {
+      await PriceItem.bulkWrite(ops.slice(i, i + chunkSize));
+    }
+
+    console.log(`➕ ${xmlName}: ${items.length} items (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
     return items.length;
   } catch (e) {
     console.error(`⚠️ ${xmlName}: ${e.message}`);
