@@ -3,3 +3,4 @@ backend/priceFetch/drive-key.json
 backend/logs/geocode_failures.json
 backend/priceFetch/success_pricefull_by_store.json
 backend/priceFetch/Downloads
+backend/priceFetch/DownloadsBak
