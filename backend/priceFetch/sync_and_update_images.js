@@ -1,12 +1,8 @@
 // sync_and_update_images.js
-// 1) סנכרון תמונות מ-Drive ל-ItemImage
-// 2) הורדת תמונות חסרות מ-CHP לכל SKUs ב-PriceItem
-// 3) סימון SKU ללא תמונה כדי לא לבדוק שוב
-// 4) throttle, full headers, single attempt
-// 5) העלאה של תמונות חדשות בחזרה ל-Drive ומחיקה מה-Downloads
-
 const path      = require('path');
 const fs        = require('fs');
+const fsp       = fs.promises;
+const os        = require('os');
 const mongoose  = require('mongoose');
 const { google }= require('googleapis');
 const pLimit    = require('p-limit').default;
@@ -20,7 +16,9 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const KEYFILE         = path.join(__dirname, 'drive-key.json');
 const FOLDER_ID       = '1JZXJWP4maO_-3U4TSx4nZ2iGtWlgvxzQ';
 const DOWNLOAD_DIR    = path.join(__dirname, 'DownloadsMissingPhotos');
-const CHP_CONCURRENCY = 2;
+// כמות מקביליות מותאמת למכונה
+const DRIVE_CONCURRENCY = os.cpus().length * 2;
+const CHP_CONCURRENCY   = os.cpus().length * 2;
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -103,9 +101,7 @@ async function uploadToDrive(filePath, sku, drive) {
     body: fs.createReadStream(filePath)
   };
   const res = await drive.files.create({ resource: fileMetadata, media, fields: 'id' });
-  // delete local file
   fs.unlinkSync(filePath);
-  console.log(`🗑️ Deleted local file ${path.basename(filePath)}`);
   return res.data.id;
 }
 
@@ -116,14 +112,16 @@ async function main() {
   await mongoose.connect(mongoUri);
   console.log('✅ Connected to MongoDB');
 
+  // Google Drive client
   const auth  = new google.auth.GoogleAuth({ keyFile: KEYFILE, scopes: ['https://www.googleapis.com/auth/drive'] });
   const drive = google.drive({ version: 'v3', auth });
 
-  // sync existing Drive → Mongo
+  // ---- Drive sync in parallel ----
   console.log('🔍 Scanning Drive for images...');
   const images = await listAllImages(FOLDER_ID, drive);
-  console.log(`Found ${images.length} Drive images`);
-  for (const { id, name } of images) {
+  console.log(`🔎 Found ${images.length} Drive images`);
+  const driveLimit = pLimit(DRIVE_CONCURRENCY);
+  await Promise.all(images.map(({ id, name }) => driveLimit(async () => {
     const itemCode = path.basename(name, path.extname(name));
     const imageUrl = `https://drive.google.com/uc?export=view&id=${id}`;
     await ItemImage.updateOne(
@@ -131,33 +129,30 @@ async function main() {
       { $set: { imageUrl }, $unset: { noImage: '' } },
       { upsert: true }
     );
-  }
+  })));
   console.log('✅ Drive sync complete');
 
-  // find SKUs missing a valid image
+  // ---- Find missing unique SKUs ----
   const existingCodes = await ItemImage.distinct('itemCode', { noImage: { $ne: true } });
-  const missing = await PriceItem.find({ itemCode: { $nin: existingCodes } }).select('itemCode').lean();
-  console.log(`🔍 ${missing.length} items missing images`);
+  const missingCodes  = await PriceItem.distinct('itemCode', { itemCode: { $nin: existingCodes } });
+  console.log(`🔍 ${missingCodes.length} unique SKUs missing images`);
 
-  // download AND upload missing images
-  const limit = pLimit(CHP_CONCURRENCY);
-  await Promise.all(missing.map(({ itemCode }) => limit(async () => {
+  // ---- Download & upload missing images in parallel ----
+  const chpLimit = pLimit(CHP_CONCURRENCY);
+  await Promise.all(missingCodes.map(sku => chpLimit(async () => {
     try {
-      // 2) download from CHP
-      const filePath = await downloadBigImage(itemCode);
-      console.log(`✅ Downloaded CHP image for SKU ${itemCode}`);
-
-      // 5) upload to Drive
-      const newId = await uploadToDrive(filePath, itemCode, drive);
+      const filePath = await downloadBigImage(sku);
+      console.log(`✅ Downloaded CHP image for SKU ${sku}`);
+      const newId = await uploadToDrive(filePath, sku, drive);
       const imageUrl = `https://drive.google.com/uc?export=view&id=${newId}`;
       await ItemImage.updateOne(
-        { itemCode },
+        { itemCode: sku },
         { $set: { imageUrl }, $unset: { noImage: '' } },
         { upsert: true }
       );
-      console.log(`🚀 Uploaded to Drive for SKU ${itemCode}`);
+      console.log(`🚀 Uploaded to Drive for SKU ${sku}`);
     } catch (err) {
-      console.warn(`⚠️ SKU ${itemCode} failed: ${err.message}`);
+      console.warn(`⚠️ SKU ${sku} failed: ${err.message}`);
     }
   })));
 
@@ -165,7 +160,8 @@ async function main() {
   await mongoose.disconnect();
 }
 
-module.exports = main;
 if (require.main === module) {
   main().catch(err => { console.error('Fatal error:', err); process.exit(1); });
 }
+
+module.exports = main;

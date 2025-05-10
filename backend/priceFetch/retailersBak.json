@@ -5,6 +5,14 @@
     "loginRequired": false
   },
   {
+    "name": "דור אלון ניהול מתחמים קמעונאיים בע\"מ",
+    "url": "https://url.publishedprices.co.il/login",
+    "login": {
+      "username": "doralon",
+      "password": ""
+    }
+  },
+  {
     "name": "טיב טעם רשתות בע\"מ",
     "url": "https://url.publishedprices.co.il/login",
     "login": {
