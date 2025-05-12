@@ -13,3 +13,5 @@ backend/.env
 backend/logs/
 backend/logs/geocode_failures.json
 backend/.env
+backend/.env
+backend/logs/geocode_failures.json

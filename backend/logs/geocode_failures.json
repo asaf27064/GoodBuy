@@ -1,104 +1,110 @@
 [
   {
-    "_id": "6821b8b4d8c8fc458ba22d19",
+    "_id": "6822572586e3704f2e306c70",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22d65",
+    "_id": "6822572586e3704f2e306cbc",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22daf",
+    "_id": "6822572586e3704f2e306d06",
     "address": "",
     "city": "עין שמר",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e1f",
+    "_id": "6822572586e3704f2e306d76",
     "address": "",
     "city": "מעלה אדומים",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e30",
+    "_id": "6822572586e3704f2e306d87",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e6f",
+    "_id": "6822572586e3704f2e306dc6",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e70",
+    "_id": "6822572586e3704f2e306dc7",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e72",
+    "_id": "6822572586e3704f2e306dc9",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e73",
+    "_id": "6822572586e3704f2e306dca",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e76",
+    "_id": "6822572586e3704f2e306dcd",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e7f",
+    "_id": "6822572586e3704f2e306dd6",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22e88",
+    "_id": "6822572586e3704f2e306ddf",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b5d8c8fc458ba22ea5",
+    "_id": "6822572586e3704f2e306dfc",
     "address": "",
     "city": "",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b7d8c8fc458ba23052",
+    "_id": "6822572686e3704f2e306fa9",
     "address": "",
     "city": "139",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b7d8c8fc458ba23057",
+    "_id": "6822572686e3704f2e306fae",
     "address": "",
     "city": "72",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b9d8c8fc458ba23190",
+    "_id": "6822572686e3704f2e3070e7",
     "address": "",
     "city": "0",
     "zipCode": ""
   },
   {
-    "_id": "6821b8b9d8c8fc458ba23191",
+    "_id": "6822572686e3704f2e3070e8",
     "address": "",
     "city": "0",
     "zipCode": ""
+  },
+  {
+    "_id": "6822572686e3704f2e307282",
+    "address": "רח' וייצמן 63 פינת כצנלסון, קניון-ערים",
+    "city": "כפר-סבא",
+    "zipCode": "0"
   }
 ]
