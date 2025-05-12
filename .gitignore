@@ -9,3 +9,7 @@ backend/.env
 backend/.env
 backend/node_modules
 backend/logs/geocode_failures.json
+backend/.env
+backend/logs/
+backend/logs/geocode_failures.json
+backend/.env
