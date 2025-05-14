@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const StoreSchema = new mongoose.Schema({
-  // Reference to the Chain document
   chainRef:    { type: mongoose.Types.ObjectId, ref: 'Chain', required: true, index: true },
   subChainId:  { type: String, required: true, index: true },
   subChainName:{ type: String },

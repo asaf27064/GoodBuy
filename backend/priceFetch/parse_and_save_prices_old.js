@@ -1,7 +1,6 @@
 const mongoose = require('mongoose')
 const fs = require('fs').promises
 const path = require('path')
-// Load environment variables
 require('dotenv').config({ path: path.join(__dirname, '../.env') })
 const os = require('os')
 const pLimit = require('p-limit').default
@@ -21,17 +20,14 @@ async function main() {
 
   const priceItemColl = mongoose.connection.db.collection('priceitems')
 
-  // Drop only secondary indexes to reduce per-write overhead
   console.log('🗑 Dropping non-essential indexes...')
   try {
-    // Drop indexes on itemCode+chainId and itemPrice if they exist
     await priceItemColl.dropIndex('itemCode_1_chainId_1')
     await priceItemColl.dropIndex('itemPrice_1')
   } catch (e) {
     console.log('No secondary indexes to drop')
   }
 
-  // Ensure filter index exists for efficient upserts
   console.log('🔧 Ensuring upsert filter index on {priceFile, itemCode}')
   await priceItemColl.createIndex({ priceFile: 1, itemCode: 1 })
 
@@ -62,7 +58,6 @@ async function main() {
 
   console.log(`🏁 Imported total ${totalItems} items`)
 
-  // Recreate dropped secondary indexes
   console.log('📈 Recreating secondary indexes...')
   await priceItemColl.createIndex({ itemCode: 1, chainId: 1 })
   await priceItemColl.createIndex({ itemPrice: 1 })

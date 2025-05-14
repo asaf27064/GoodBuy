@@ -1,11 +1,9 @@
-// models/PriceItem.js
 const mongoose = require('mongoose');
 
 const PriceItemSchema = new mongoose.Schema({
   priceFile:            { type: mongoose.Types.ObjectId, ref: 'PriceFile', required: true, index: true },
   itemCode:             { type: String, required: true, index: true },
 
-  // Denormalized chain info for fast lookups:
   chainId:              { type: String, required: true, index: true },
   chainName:            { type: String, required: true },
 
@@ -28,7 +26,6 @@ const PriceItemSchema = new mongoose.Schema({
   itemId:               { type: String },
 }, { timestamps: true });
 
-// Compound index to support fast distinct/filter by SKU and chain
 PriceItemSchema.index({ itemCode: 1, chainId: 1 });
 
 module.exports = mongoose.model('PriceItem', PriceItemSchema);

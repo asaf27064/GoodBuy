@@ -1,6 +1,3 @@
-// sync_and_update_images.js
-// mode: “init” does a one-time Drive sync + mark missing SKUs
-//       “update” skips Drive and only processes brand-new SKUs
 const path        = require('path');
 const fs          = require('fs');
 const mongoose    = require('mongoose');
@@ -22,7 +19,6 @@ const MAX_CHP_TIMEOUT   = 90_000;  // ms
 const mode = process.argv[2] === 'update' ? 'update' : 'init';
 const now  = () => new Date().toISOString();
 
-// 1) Recursively list images in Drive
 async function listAllImages(folderId, drive) {
   let images = [], pageToken = null;
   do {
@@ -44,10 +40,8 @@ async function listAllImages(folderId, drive) {
   return images;
 }
 
-// 2) Download single image from CHP
 async function downloadBigImage(sku) {
   const url = `https://chp.co.il/main_page/compare_results?product_barcode=${sku}`;
-  // random small delay to spread requests
   await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
   const res = await axios.get(url, {
     timeout: MAX_CHP_TIMEOUT,
@@ -77,7 +71,6 @@ async function downloadBigImage(sku) {
   return filePath;
 }
 
-// 3) Upload to Drive
 async function uploadToDrive(filePath, sku, drive) {
   const fileMetadata = {
     name: `${sku}.png`,
@@ -103,7 +96,6 @@ async function main() {
   const auth  = new google.auth.GoogleAuth({ keyFile: KEYFILE, scopes: ['https://www.googleapis.com/auth/drive'] });
   const drive = google.drive({ version: 'v3', auth });
 
-  // INIT mode: one-time Drive sync & mark all others as not_found
   if (mode === 'init') {
     console.log(`[${now()}] 🔍 Scanning Drive for existing images...`);
     const images     = await listAllImages(DRIVE_FOLDER_ID, drive);
@@ -128,7 +120,6 @@ async function main() {
       );
     })));
 
-    // mark everything else as not_found
     const foundCodes = await ItemImage.distinct('itemCode', { status: 'found' });
     const allCodes   = await PriceItem.distinct('itemCode');
     const toMark     = allCodes.filter(code => !foundCodes.includes(code));
@@ -142,7 +133,6 @@ async function main() {
     ));
   }
 
-  // BOTH modes: fetch only brand-new SKUs
   const seenCodes  = await ItemImage.distinct('itemCode');
   const allCodes   = await PriceItem.distinct('itemCode');
   const missing    = allCodes.filter(code => !seenCodes.includes(code));
@@ -171,7 +161,6 @@ async function main() {
       console.log(`[${now()}] 🚀 Uploaded to Drive & recorded for SKU ${sku}`);
     } catch (err) {
       console.warn(`[${now()}] ⚠️ SKU ${sku} failed: ${err.message}`);
-      // mark as not_found so we don't retry on update
       await ItemImage.updateOne(
         { itemCode: sku },
         { $set: { status: 'not_found', lastCheckedAt: new Date() }, $inc: { attempts: 1 } },

@@ -1,16 +1,12 @@
-// pipeline.js
-// Usage:
-//   node pipeline.js init
-//   node pipeline.js update
-
 const { spawn } = require('child_process');
 const mongoose  = require('mongoose');
 const path      = require('path');
+const fs        = require('fs');
 const Store     = require('../models/Store');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const mode           = process.argv[2] === 'update' ? 'update' : 'init';
-const MAX_RUNTIME_MS = 10 * 60 * 1000;  // 10 minutes
+const MAX_RUNTIME_MS = 10 * 60 * 1000;
 const baseDir        = __dirname;
 
 const now = () => new Date().toISOString();
@@ -51,7 +47,6 @@ function runCommand(label, cmd, args = []) {
 async function main() {
   const pipelineStart = process.hrtime();
 
-  // INIT-mode preflight: skip if stores already exist
   if (mode === 'init') {
     try {
       await mongoose.connect(process.env.MONGO_URI);
@@ -69,13 +64,11 @@ async function main() {
 
   console.log(`\n[${now()}] 🛠️ Starting pipeline in ${mode.toUpperCase()} mode`);
 
-  // Step 1 & 2: only on INIT
   if (mode === 'init') {
     await runCommand('STEP 1: parse_and_save_stores.js',    'node', ['parse_and_save_stores.js']);
     await runCommand('STEP 2: geocode_stores.js',          'node', ['geocode_stores.js']);
   }
 
-  // Step 3: fetch price files in parallel
   const fetchScripts = [
     'fetch_hazihinam.js',
     'fetch_laibcatalog.js',
@@ -90,17 +83,18 @@ async function main() {
     )
   );
 
-  // Step 4: decompress raw files
   await runCommand('STEP 4: decompress.js', 'node', ['decompress.js']);
 
-  // Step 5: parse & save price items (with fallback)
   await runCommand(
     'STEP 5: parse_and_save_priceitems.js',
     'node',
     ['parse_and_save_priceitems.js', mode]
   );
 
-  // Step 6: sync and update images
+  console.log(`\n[${now()}] 🗑 Deleting raw files in ${path.join(baseDir, 'Downloads')}`);
+  await fs.promises.rm(path.join(baseDir, 'Downloads'), { recursive: true, force: true });
+  console.log(`[${now()}] 🗑 Deleted Downloads folder`);
+
   await runCommand(
     'STEP 6: sync_and_update_images.js',
     'node',

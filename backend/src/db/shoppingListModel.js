@@ -7,7 +7,7 @@ const shoppingListSchema = new Schema({
     _id: { type: mongoose.ObjectId },
     members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     title: { type: String },
-    importantList: { type: Boolean, required: true, default: false}, // Will determine whether this list affects recommendations
+    importantList: { type: Boolean, required: true, default: false},
     products: [productSchema]
 });
 

@@ -5,7 +5,7 @@ const { Schema } = mongoose;
 const storeSchema = new Schema({
     _id: { 
         chain: {type: String, required: true},
-        subChain: {type: String}, // Might be relevant in cases like "Shufersal BE", but consider removal based on all chains' identifiers.
+        subChain: {type: String},
         branch: {type: String, required: true},
     },
 

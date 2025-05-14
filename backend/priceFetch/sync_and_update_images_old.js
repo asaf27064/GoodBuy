@@ -1,4 +1,3 @@
-// sync_and_update_images.js
 const path      = require('path');
 const fs        = require('fs');
 const fsp       = fs.promises;
@@ -12,11 +11,9 @@ const ItemImage = require('../models/ItemImage');
 const PriceItem = require('../models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// הגדרות
 const KEYFILE         = path.join(__dirname, 'drive-key.json');
 const FOLDER_ID       = '1JZXJWP4maO_-3U4TSx4nZ2iGtWlgvxzQ';
 const DOWNLOAD_DIR    = path.join(__dirname, 'DownloadsMissingPhotos');
-// כמות מקביליות מותאמת למכונה
 const DRIVE_CONCURRENCY = os.cpus().length * 2;
 const CHP_CONCURRENCY   = os.cpus().length * 2;
 
@@ -24,7 +21,6 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 1) Recursively list all images in Drive folder
 async function listAllImages(folderId, drive) {
   let images = [];
   let pageToken = null;
@@ -47,7 +43,6 @@ async function listAllImages(folderId, drive) {
   return images;
 }
 
-// 2) Download big image from CHP with full headers, single attempt
 async function downloadBigImage(sku) {
   const url = `https://chp.co.il/main_page/compare_results?product_barcode=${sku}`;
   await wait(200 + Math.random() * 300);
@@ -90,7 +85,6 @@ async function downloadBigImage(sku) {
   return filePath;
 }
 
-// 5) Upload new image to Drive and delete local file
 async function uploadToDrive(filePath, sku, drive) {
   const fileMetadata = {
     name: `${sku}.png`,
@@ -105,18 +99,15 @@ async function uploadToDrive(filePath, sku, drive) {
   return res.data.id;
 }
 
-// 3) main orchestration
 async function main() {
   const mongoUri = process.env.MONGO_URI;
   if (!mongoUri) { console.error('✖️ MONGO_URI not set'); process.exit(1); }
   await mongoose.connect(mongoUri);
   console.log('✅ Connected to MongoDB');
 
-  // Google Drive client
   const auth  = new google.auth.GoogleAuth({ keyFile: KEYFILE, scopes: ['https://www.googleapis.com/auth/drive'] });
   const drive = google.drive({ version: 'v3', auth });
 
-  // ---- Drive sync in parallel ----
   console.log('🔍 Scanning Drive for images...');
   const images = await listAllImages(FOLDER_ID, drive);
   console.log(`🔎 Found ${images.length} Drive images`);
@@ -132,12 +123,10 @@ async function main() {
   })));
   console.log('✅ Drive sync complete');
 
-  // ---- Find missing unique SKUs ----
   const existingCodes = await ItemImage.distinct('itemCode', { noImage: { $ne: true } });
   const missingCodes  = await PriceItem.distinct('itemCode', { itemCode: { $nin: existingCodes } });
   console.log(`🔍 ${missingCodes.length} unique SKUs missing images`);
 
-  // ---- Download & upload missing images in parallel ----
   const chpLimit = pLimit(CHP_CONCURRENCY);
   await Promise.all(missingCodes.map(sku => chpLimit(async () => {
     try {

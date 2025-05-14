@@ -1,5 +1,3 @@
-// parse.js
-
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const MODE = process.argv[2] === 'update' ? 'update' : 'init';
@@ -171,7 +169,6 @@ async function worker() {
       continue;
     }
 
-    // --- updated pricefile logic ---
     const up = await pfColl.updateOne(
       { storeRef },
       { $set: { fileName, fetchedAt: new Date() } },
@@ -184,7 +181,6 @@ async function worker() {
           { projection: { _id: 1 } }
         );
     const pfId = pfDoc._id;
-    // --- end change ---
 
     await new Promise(resolve => {
       const parser = new expat.Parser();
