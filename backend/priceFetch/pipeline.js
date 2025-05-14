@@ -95,9 +95,9 @@ async function main() {
 
   // Step 5: parse & save price items (with fallback)
   await runCommand(
-    'STEP 5: parse_priceitems_with_fallback.js',
+    'STEP 5: parse_and_save_priceitems.js',
     'node',
-    ['parse_priceitems_with_fallback.js', mode]
+    ['parse_and_save_priceitems.js', mode]
   );
 
   // Step 6: sync and update images
