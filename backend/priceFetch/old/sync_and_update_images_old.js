@@ -7,8 +7,8 @@ const { google }= require('googleapis');
 const pLimit    = require('p-limit').default;
 const axios     = require('axios');
 const cheerio   = require('cheerio');
-const ItemImage = require('../models/ItemImage');
-const PriceItem = require('../models/PriceItem');
+const ItemImage = require('../../models/ItemImage');
+const PriceItem = require('../../models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const KEYFILE         = path.join(__dirname, 'drive-key.json');

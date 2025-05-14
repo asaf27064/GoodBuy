@@ -5,9 +5,9 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') })
 const os = require('os')
 const pLimit = require('p-limit').default
 const { XMLParser } = require('fast-xml-parser')
-const Chain = require('../models/Chain')
-const Store = require('../models/Store')
-const PriceFile = require('../models/PriceFile')
+const Chain = require('../../models/Chain')
+const Store = require('../../models/Store')
+const PriceFile = require('../../models/PriceFile')
 
 async function main() {
   const mongoUri = process.env.MONGO_URI
@@ -62,7 +62,7 @@ async function main() {
   await priceItemColl.createIndex({ itemCode: 1, chainId: 1 })
   await priceItemColl.createIndex({ itemPrice: 1 })
 
-  await require('./sync_and_update_images')()
+  await require('../sync_and_update_images')()
 
   await mongoose.disconnect()
   console.log('🔌 Disconnected from MongoDB')
