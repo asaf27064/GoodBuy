@@ -1,3 +1,4 @@
+// models/PriceItem.js
 const mongoose = require('mongoose');
 
 const PriceItemSchema = new mongoose.Schema({
@@ -25,7 +26,6 @@ const PriceItemSchema = new mongoose.Schema({
   allowDiscount:        { type: Boolean },
   itemStatus:           { type: Number },
   itemId:               { type: String },
-  imageUrl:             { type: String }
 }, { timestamps: true });
 
 // Compound index to support fast distinct/filter by SKU and chain

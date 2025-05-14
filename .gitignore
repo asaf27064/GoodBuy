@@ -15,3 +15,6 @@ backend/logs/geocode_failures.json
 backend/.env
 backend/.env
 backend/logs/geocode_failures.json
+backend/node_modules/
+backend/node_modules/mongodb/
+backend/node_modules/mongodb
