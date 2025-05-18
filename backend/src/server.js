@@ -49,12 +49,29 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
   });
+
+  socket.on('createList', (data) => {
+    console.log(`Created List by ${socket.id}:`, data);
+    io.emit('List Created', data);
+  });
 });
 
 const itemsRoute = require('./routes/Items');
 const historyRoute = require('./routes/History');
 app.use('/items', itemsRoute);
 app.use('/history', historyRoute);
+
+
+// Define routes
+const userRoutes = require('./routes/userRoutes');
+const shoppingListRoutes = require('./routes/shoppingListRoutes');
+const storeRoutes = require('./routes/storeRoutes')
+const productRoutes = require('./routes/productRoutes')
+
+app.use('/api/Users', userRoutes);
+app.use('/api/ShoppingLists', shoppingListRoutes);
+app.use('/api/Stores', storeRoutes);
+app.use('/api/Products', productRoutes);
 
 const PORT = 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,14 +1,19 @@
 
-import React from 'react';
+import React, {useState} from 'react';
 import { Modal, View, Text, TextInput, StyleSheet, TouchableHighlight } from 'react-native';
 import globalStyles from '../styles/globalStyles';
 import BouncyCheckbox from "react-native-bouncy-checkbox";
 
-const AddListModal = ({ isVisible, onClose }) => {
 
-    const createNewList = () => {
+const AddListModal = ({ isVisible, onClose, createList}) => {
 
-    }
+  const [titleText, setTitleText] = useState('');
+  const [membersText, setMembersText] = useState(''); //Currently converted to list, eventually should be handled as a list of users
+  const [importantListBool, setImportantListBool] = useState(false);
+
+  const addNewList = () => {
+    createList(titleText, membersText, importantListBool);
+  }
 
   return (
     <Modal
@@ -22,11 +27,10 @@ const AddListModal = ({ isVisible, onClose }) => {
             <TouchableHighlight onPress={onClose}>
                 <Text>Close</Text>
             </TouchableHighlight>
-            <TextInput placeholder="name your list"></TextInput>
-            <TextInput placeholder="members"></TextInput>
-            <TextInput placeholder="buy until"></TextInput>
-            <BouncyCheckbox text='important list?' textStyle={{ textDecorationLine: "none"}} onPress={(isChecked) => {}}/>
-            <TouchableHighlight onPress={createNewList} style={globalStyles.confirmBtn}>
+            <TextInput placeholder="name your list" onChangeText={text =>{setTitleText(text)}}></TextInput>
+            <TextInput placeholder="members" onChangeText={text =>{setMembersText(text)}}></TextInput>
+            <BouncyCheckbox text='important list?' textStyle={{ textDecorationLine: "none"}} onPress={(isChecked) => {setImportantListBool(isChecked)}}/>
+            <TouchableHighlight onPress={addNewList} style={globalStyles.confirmBtn}>
                 <Text>Add List</Text>
             </TouchableHighlight>
         </View>
