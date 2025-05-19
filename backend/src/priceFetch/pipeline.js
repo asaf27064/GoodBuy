@@ -96,9 +96,9 @@ async function main() {
   console.log(`[${now()}] 🗑 Deleted Downloads folder`);
 
   await runCommand(
-    'STEP 6: sync_and_update_images_aws.js',
+    'STEP 6: sync_and_update_images_r2.js',
     'node',
-    ['sync_and_update_images_aws.js', mode]
+    ['sync_and_update_images_r2.js', mode]
   );
 
   const totalTime = hrToMs(process.hrtime(pipelineStart));

@@ -5,8 +5,8 @@ const pLimit = require('p-limit').default;
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { S3Client, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
-const ItemImage = require('../models/ItemImage');
-const PriceItem = require('../models/PriceItem');
+const ItemImage = require('../../models/ItemImage');
+const PriceItem = require('../../models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const DOWNLOAD_DIR = path.join(__dirname, 'DownloadsMissingPhotos');
