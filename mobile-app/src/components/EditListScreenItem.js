@@ -4,7 +4,7 @@ import globalStyles from '../styles/globalStyles';
 import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
 import { COLORS } from '../styles/colors';
 
-const ProductListScreenItem = ({product}) => {
+const ProductListScreenItem = ({product, removeProduct}) => {
 
     const MIN_UNITS = 1;
     const MAX_UNITS = 99; // Placeholder, consider different upper limit.
@@ -26,23 +26,23 @@ const ProductListScreenItem = ({product}) => {
     }
 
     const removeItem = () => {
-        // add when server functionality works
+        removeProduct(product);
     }
+
 
     return (
         <View style={styles.container}>
-            <Image source={{uri: product.picture}} style={styles.prodPic}/>
+            <Image source={{uri: product.product.image}} style={styles.prodPic}/>
             <View style={styles.prodDesc}>
-                <Text numberOfLines={1} style={globalStyles.headerText}>{product.name}</Text>
-                <Text numberOfLines={1}>Price: {product.price}</Text>
-                <Text numberOfLines={1}>Total Price: {product.price * prodAmount}</Text>
+                <Text numberOfLines={1} style={globalStyles.headerText}>{product.product.name}</Text>
+                <Text numberOfLines={1} style={globalStyles.text}> {product.product.category}</Text>
             </View>
             <View style={styles.prodEdit}>
                 <View style={styles.prodChangeAmount}>
                     <TouchableHighlight style={styles.changeAmountButton} onPress={addUnit} disabled={prodAmount === MAX_UNITS}>
                         <MaterialCommunityIcons name="plus"/>
                     </TouchableHighlight>
-                    <TextInput>{prodAmount}</TextInput>
+                    <TextInput onEndEditing={e => {/* Check if input is a positive integer, otherwise don't update prodAmount */}}>{prodAmount}</TextInput>
                     <TouchableHighlight style={styles.changeAmountButton} onPress={subtractUnit} disabled={prodAmount === MIN_UNITS} /* Effectively can't be reduced below 1*/> 
                         <MaterialCommunityIcons name="minus"/>
                     </TouchableHighlight>
@@ -60,10 +60,9 @@ const ProductListScreenItem = ({product}) => {
 const styles = StyleSheet.create({
         container: {
             flexDirection: 'row',
-            backgroundColor: COLORS.goodBuyGray,
+            backgroundColor: COLORS.secondaryGray,
+            borderRadius: 10,
             padding: 10,
-            borderBottomWidth: 2,
-            borderBottomColor: COLORS.secondaryGray
         },
 
         prodPic: {
@@ -73,8 +72,8 @@ const styles = StyleSheet.create({
         },
 
         prodDesc: {
+            padding: 10,
             flex: 3,
-            backgroundColor: 'gold'
         },
 
         prodEdit: {
@@ -82,12 +81,10 @@ const styles = StyleSheet.create({
             flex: 2,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'green'
         },
         prodChangeAmount: {
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: 'green'
         },
         changeAmountButton: {
             flex: 2,

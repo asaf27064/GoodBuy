@@ -4,5 +4,8 @@ export const COLORS = {
     goodBuyGray: '#171717',
     secondaryGray: '#464646',
     goodBuyGreen: '#00dc37',
+    muteRed: '#ff5c5c',
+    muteYellow: '#fff55c',
+    muteGreen: '#6fff5c'
   }
   

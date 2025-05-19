@@ -45,7 +45,11 @@ const globalStyles = StyleSheet.create({
 
     headerText: {
       fontSize: 20,
-      fontWeight: 'bold'
+      fontWeight: 'bold',
+      color: 'white'
+    }, 
+    text: {
+      color: 'white'
     }, 
     
   });

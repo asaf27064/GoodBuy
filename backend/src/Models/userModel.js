@@ -1,15 +1,12 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
-    _id: { type: mongoose.ObjectId, required: true },
     username: { type: String, required: true },
     password: { type: String, required: true },
     email: { type: String, required: true, unique: true},
-    location: { type: String, default: '' }
+    location: { type: String, default: '' } // Is this relevant as part of the user DB? reconsider.
 });
 
-const User = mongoose.model('User', userSchema);
-
-export default User;
+module.exports = mongoose.model('User', userSchema);

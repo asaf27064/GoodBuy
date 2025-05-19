@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const { Schema } = mongoose;
 
@@ -10,8 +10,7 @@ const storeSchema = new Schema({
     },
 
     address: { type: String, required: true },
+    coordiantes: {type: Number} // This is a placeholden, check on GeoJSON later.
 });
 
-const Store = mongoose.model('Store', storeSchema);
-
-export default Store;
+module.exports = mongoose.model('Store', storeSchema);
