@@ -2,25 +2,16 @@ const ShoppingList = require('../Models/shoppingListModel');
 const User = require('../Models/userModel');
 
 
-
 exports.getAllUserShoppingLists = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const list = await Item.findById(id);
-        if (!list) {
-            return res.status(404).json({ error: 'List not found' });
-        }
-        res.json(list);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-
-    const userId = req.user._id;
-    const userLists = await ShoppingList.find({ members: userId})
-        .populate('members', '-password') // From AP2, check.
-
-    res.json(userLists);
-};
+  try {
+    const userId = req.user.sub || req.user._id
+    const lists = await ShoppingList.find({ members: userId })
+      .populate('members', '-passwordHash')
+    return res.json(lists)
+  } catch (error) {
+    return res.status(500).json({ error: error.message })
+  }
+}
   
 
 exports.createList = async (req, res) => {

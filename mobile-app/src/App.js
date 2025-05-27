@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Button, StyleSheet } from 'react-native'
+import { TouchableOpacity, StyleSheet } from 'react-native'
 import axios from 'axios'
 import io from 'socket.io-client'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer'
 import HomeScreen from './screens/HomeScreen'
 import { ShoppingListStack } from './screens/ShoppingListsScreen'
 import ShoppingHistoryScreen from './screens/ShoppingHistoryScreen'
@@ -17,96 +18,114 @@ import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import { API_BASE } from './config'
 
+axios.defaults.baseURL = API_BASE
 const socket = io(API_BASE)
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
+const Drawer = createDrawerNavigator()
 
-const MainApp = () => {
-  const [items, setItems] = useState([])
-  const [text, setText] = useState('')
+function CustomDrawerContent(props) {
   const { logout } = useAuth()
+  return (
+    <DrawerContentScrollView {...props}>
+      <DrawerItem
+        label="Logout"
+        onPress={() => {
+          logout()
+          props.navigation.closeDrawer()
+        }}
+      />
+    </DrawerContentScrollView>
+  )
+}
+
+function Tabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ navigation }) => ({
+        tabBarActiveTintColor: COLORS.goodBuyGreen,
+        tabBarInactiveTintColor: COLORS.white,
+        tabBarStyle: { backgroundColor: COLORS.goodBuyGray },
+        headerStyle: { backgroundColor: COLORS.goodBuyGreen },
+        headerTintColor: COLORS.white,
+        headerTitleStyle: { fontWeight: 'bold' },
+        headerRight: () => (
+          <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 16 }}>
+            <MaterialCommunityIcons name="menu" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+        )
+      })}
+    >
+      <Tab.Screen
+        name="ShopList"
+        component={ShoppingListStack}
+        options={{
+          tabBarLabel: 'Shopping Lists',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="script-text" color={color} size={size} />
+        }}
+      />
+      <Tab.Screen
+        name="Recommend"
+        component={RecommendationScreen}
+        options={{
+          tabBarLabel: 'Suggestions',
+          title: 'Personalized Suggestions',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="thumb-up" color={color} size={size} />
+        }}
+      />
+      <Tab.Screen
+        name="Compare"
+        component={PriceComparisonScreen}
+        options={{
+          tabBarLabel: 'Comparison',
+          title: 'Price Comparison',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="scale-unbalanced" color={color} size={size} />
+        }}
+      />
+      <Tab.Screen
+        name="History"
+        component={ShoppingHistoryScreen}
+        options={{
+          tabBarLabel: 'History',
+          title: 'Purchase History',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="clipboard-text-clock" color={color} size={size} />
+        }}
+      />
+    </Tab.Navigator>
+  )
+}
+
+function MainApp() {
+  const [items, setItems] = useState([])
 
   useEffect(() => {
-    axios.get('/ping').then(r => console.log('Backend response:', r.data)).catch(console.error)
     socket.on('itemAdded', i => setItems(p => [...p, i]))
     return () => socket.off('itemAdded')
   }, [])
 
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          tabBarActiveTintColor: COLORS.goodBuyGreen,
-          tabBarInactiveTintColor: COLORS.white,
-          tabBarStyle: { backgroundColor: COLORS.goodBuyGray },
-          headerStyle: { backgroundColor: COLORS.goodBuyGreen },
-          headerTintColor: COLORS.white,
-          headerTitleStyle: { fontWeight: 'bold' },
-          headerRight: () => (
-            <Button onPress={logout} title="Logout" color="#fff" />
-          )
-        }}
-      >
-        <Tab.Screen
-          name="ShopList"
-          component={ShoppingListStack}
-          options={{
-            tabBarLabel: 'Shopping Lists',
-            headerShown: false,
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="script-text" color={color} size={size} />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="Recommend"
-          component={RecommendationScreen}
-          options={{
-            title: 'Personalized Suggestions',
-            tabBarLabel: 'Suggestions',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="thumb-up" color={color} size={size} />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="Compare"
-          component={PriceComparisonScreen}
-          options={{
-            title: 'Price Comparison',
-            tabBarLabel: 'Comparison',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="scale-unbalanced" color={color} size={size} />
-            )
-          }}
-        />
-        <Tab.Screen
-          name="History"
-          component={ShoppingHistoryScreen}
-          options={{
-            title: 'Purchase History',
-            tabBarLabel: 'History',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="clipboard-text-clock" color={color} size={size} />
-            )
-          }}
-        />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <Drawer.Navigator
+      drawerPosition="right"
+      drawerContent={props => <CustomDrawerContent {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Drawer.Screen name="Home" component={Tabs} />
+    </Drawer.Navigator>
   )
 }
 
-const AuthRoutes = () => (
-  <NavigationContainer>
+function AuthRoutes() {
+  return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
-  </NavigationContainer>
-)
+  )
+}
 
-const Root = () => {
+function Root() {
   const { token, loading } = useAuth()
   if (loading) return null
   return token ? <MainApp /> : <AuthRoutes />
@@ -115,14 +134,11 @@ const Root = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <Root />
+      <NavigationContainer>
+        <Root />
+      </NavigationContainer>
     </AuthProvider>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, marginTop: 50 },
-  header: { fontSize: 24, marginBottom: 10 },
-  item: { fontSize: 18, marginVertical: 5 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginVertical: 10 }
-})
+const styles = StyleSheet.create({})
