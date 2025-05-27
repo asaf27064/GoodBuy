@@ -1,4 +1,3 @@
-// screens/ShoppingListsScreen.js
 import React, { useState } from 'react'
 import axios from 'axios'
 import {
@@ -82,6 +81,7 @@ export const ShoppingListStack = () => (
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          style={{ marginRight: 20, padding: 8 }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <MaterialCommunityIcons
@@ -90,8 +90,7 @@ export const ShoppingListStack = () => (
             color={COLORS.white}
           />
         </TouchableOpacity>
-      ),
-      headerRightContainerStyle: { paddingRight: 16 }
+      )
     })}
   >
     <Stack.Screen
