@@ -1,12 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose=require('mongoose')
+const bcrypt=require('bcrypt')
 
-const { Schema } = mongoose;
+const userSchema=new mongoose.Schema(
+  {
+    email:{type:String,required:true,unique:true,lowercase:true},
+    passwordHash:{type:String,required:true},
+    username:{type:String,unique:true,sparse:true},
+    location:{type:String,default:''}
+  },
+  {timestamps:true}
+)
 
-const userSchema = new Schema({
-    username: { type: String, required: true },
-    password: { type: String, required: true },
-    email: { type: String, required: true, unique: true},
-    location: { type: String, default: '' } // Is this relevant as part of the user DB? reconsider.
-});
+userSchema.methods.verifyPassword=function(p){return bcrypt.compare(p,this.passwordHash)}
+userSchema.pre('save',async function(){if(this.isModified('passwordHash'))return;this.passwordHash=await bcrypt.hash(this.passwordHash,12)})
 
-module.exports = mongoose.model('User', userSchema);
+module.exports=mongoose.model('User',userSchema)
