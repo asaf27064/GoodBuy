@@ -25,18 +25,18 @@ export const AuthProvider = ({ children }) => {
     })()
   }, [])
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
     console.log('🚌 sending POST /auth/login')
-    const { data } = await axios.post('/auth/login', { email, password })
+    const { data } = await axios.post('/auth/login', { username, password })
     console.log('🚚 login 2xx')
     await SecureStore.setItemAsync('token', data.token)
     setToken(data.token)
     applyAuth(data.token)
   }
 
-  const register = async (email, password) => {
+  const register = async (email, username, password) => {
     console.log('🚌 sending POST /auth/register')
-    await axios.post('/auth/register', { email, password })
+    await axios.post('/auth/register', { email, username, password })
     console.log('🚚 register 2xx')
   }
 
