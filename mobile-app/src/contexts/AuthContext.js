@@ -1,49 +1,56 @@
-import React,{createContext,useContext,useState,useEffect} from 'react';
-import * as SecureStore from 'expo-secure-store';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import * as SecureStore from 'expo-secure-store'
+import axios from 'axios'
+import { API_BASE } from '../config'
 
-const AuthContext=createContext(null);
+axios.defaults.baseURL = API_BASE
 
-export const AuthProvider=({children})=>{
-  const[loading,setLoading]=useState(true);
-  const[token,setToken]=useState(null);
+const AuthContext = createContext(null)
 
-  const applyAuth=t=>{
-    if(t)axios.defaults.headers.common.Authorization=`Bearer ${t}`;
-    else delete axios.defaults.headers.common.Authorization;
-  };
+export const AuthProvider = ({ children }) => {
+  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState(null)
 
-  useEffect(()=>{
-    (async()=>{
-      const t=await SecureStore.getItemAsync('token');
-      setToken(t);
-      applyAuth(t);
-      setLoading(false);
-    })();
-  },[]);
+  const applyAuth = t => {
+    if (t) axios.defaults.headers.common.Authorization = `Bearer ${t}`
+    else delete axios.defaults.headers.common.Authorization
+  }
 
-  const login=async(email,password)=>{
-    const{data}=await axios.post('http://192.168.0.105:3000/auth/login',{email,password});
-    await SecureStore.setItemAsync('token',data.token);
-    setToken(data.token);
-    applyAuth(data.token);
-  };
+  useEffect(() => {
+    ;(async () => {
+      const t = await SecureStore.getItemAsync('token')
+      setToken(t)
+      applyAuth(t)
+      setLoading(false)
+    })()
+  }, [])
 
-  const register=async(email,password)=>{
-    await axios.post('http://192.168.0.105:3000/auth/register',{email,password});
-  };
+  const login = async (email, password) => {
+    console.log('🚌 sending POST /auth/login')
+    const { data } = await axios.post('/auth/login', { email, password })
+    console.log('🚚 login 2xx')
+    await SecureStore.setItemAsync('token', data.token)
+    setToken(data.token)
+    applyAuth(data.token)
+  }
 
-  const logout=async()=>{
-    await SecureStore.deleteItemAsync('token');
-    setToken(null);
-    applyAuth(null);
-  };
+  const register = async (email, password) => {
+    console.log('🚌 sending POST /auth/register')
+    await axios.post('/auth/register', { email, password })
+    console.log('🚚 register 2xx')
+  }
 
-  return(
-    <AuthContext.Provider value={{token,loading,login,register,logout}}>
+  const logout = async () => {
+    await SecureStore.deleteItemAsync('token')
+    setToken(null)
+    applyAuth(null)
+  }
+
+  return (
+    <AuthContext.Provider value={{ token, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth=()=>useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext)

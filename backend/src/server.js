@@ -33,43 +33,23 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`)
-
-  const { userId, householdId } = socket.handshake.query
-
+  const { householdId } = socket.handshake.query
   if (householdId) {
     socket.join(householdId)
     console.log(`Socket ${socket.id} joined household room: ${householdId}`)
   }
-
-  socket.on('newItem', (data) => {
+  socket.on('newItem', data => {
     console.log(`Received new item from ${socket.id}:`, data)
-    if (householdId) {
-      io.to(householdId).emit('itemAdded', data)
-    } else {
-      io.emit('itemAdded', data)
-    }
+    if (householdId) io.to(householdId).emit('itemAdded', data)
+    else io.emit('itemAdded', data)
   })
-
-  socket.on('editItem', (data) => {
-    console.log(`Item edited by ${socket.id}:`, data)
-    io.emit('itemEdited', data)
-  })
-
-  socket.on('deleteItem', (data) => {
-    console.log(`Item deleted by ${socket.id}:`, data)
-    io.emit('itemDeleted', data)
-  })
-
-  socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`)
-  })
-
-  socket.on('createList', (data) => {
-    console.log(`Created List by ${socket.id}:`, data)
-    io.emit('List Created', data)
-  })
+  socket.on('editItem', data => io.emit('itemEdited', data))
+  socket.on('deleteItem', data => io.emit('itemDeleted', data))
+  socket.on('createList', data => io.emit('List Created', data))
+  socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`))
 })
 
+/*––– existing routes –––*/
 const itemsRoute = require('./routes/Items')
 const historyRoute = require('./routes/History')
 app.use('/items', itemsRoute)
@@ -85,8 +65,9 @@ app.use('/api/ShoppingLists', shoppingListRoutes)
 app.use('/api/Stores', storeRoutes)
 app.use('/api/Products', productRoutes)
 
+/*––– your auth routes – lowercase “auth” –––*/
 const authRoutes = require('./routes/auth')
 app.use('/auth', authRoutes)
 
-const PORT = 3000
+const PORT = process.env.PORT || 3000
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`))

@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
     "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/drawer": "^7.3.12",
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/native-stack": "^7.3.10",
     "axios": "^1.8.4",
@@ -29,7 +30,8 @@
     "react-native-tag-input": "^0.0.21",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "undefined": "\\"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
