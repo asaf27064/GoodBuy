@@ -21,6 +21,7 @@
     "expo": "^53.0.9",
     "expo-secure-store": "~14.2.3",
     "expo-status-bar": "~2.2.3",
+    "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
     "react": "19.0.0",
     "react-dom": "19.0.0",

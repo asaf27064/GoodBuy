@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }) => {
     })()
   }, [applyAuth])
 
-  // Automatically log out on 401 Unauthorized
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
       response => response,
