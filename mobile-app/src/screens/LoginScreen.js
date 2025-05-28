@@ -1,14 +1,14 @@
+// 📁 mobile-app/src/screens/LoginScreen.js
+
 import React, { useState, useCallback } from 'react'
 import {
   SafeAreaView,
   ScrollView,
   View,
-  TextInput,
-  Text,
-  Pressable,
-  ActivityIndicator,
-  StyleSheet
+  StyleSheet,
+  ActivityIndicator
 } from 'react-native'
+import { Text, TextInput, HelperText, Button } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { COLORS } from '../styles/colors'
@@ -22,12 +22,12 @@ export default function LoginScreen() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Clear error and input fields whenever this screen gains focus
+  // Clear inputs & errors when screen focused
   useFocusEffect(
     useCallback(() => {
-      setError('')
       setUsername('')
       setPassword('')
+      setError('')
     }, [])
   )
 
@@ -36,7 +36,7 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       await login(username, password)
-      // on success, navigation happens automatically
+      // on success, navigation handled by AuthContext/Root
     } catch (e) {
       const msg = e.response?.data?.message || 'אירעה שגיאה, נסה שוב מאוחר יותר'
       setError(msg)
@@ -51,45 +51,54 @@ export default function LoginScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>התחברות</Text>
 
-          {!!error && <Text style={styles.error}>{error}</Text>}
-
           <TextInput
-            style={[styles.input, error && styles.inputError]}
-            placeholder="Username"
-            autoCapitalize="none"
+            label="Username"
+            mode="outlined"
             value={username}
             onChangeText={setUsername}
+            autoCapitalize="none"
+            error={!!error}
+            style={styles.input}
           />
 
           <TextInput
-            style={[styles.input, error && styles.inputError]}
-            placeholder="Password"
-            secureTextEntry
+            label="Password"
+            mode="outlined"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
+            error={!!error}
+            style={styles.input}
           />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-              (loading || !username || !password) && styles.buttonDisabled
-            ]}
-            onPress={handleLogin}
-            disabled={loading || !username || !password}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>התחבר</Text>
-            }
-          </Pressable>
+          {error ? (
+            <HelperText type="error" visible>
+              {error}
+            </HelperText>
+          ) : null}
 
-          <Pressable
-            onPress={() => navigation.navigate('Register')}
-            style={styles.link}
+          <Button
+            mode="contained"
+            onPress={handleLogin}
+            loading={loading}
+            disabled={loading || !username || !password}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            buttonColor={COLORS.goodBuyGreen}
+            rippleColor="rgba(255,255,255,0.3)"
           >
-            <Text style={styles.linkText}>אין לך חשבון? הרשמה</Text>
-          </Pressable>
+            התחבר
+          </Button>
+
+          <Button
+            onPress={() => navigation.navigate('Register')}
+            uppercase={false}
+            style={styles.link}
+            labelStyle={styles.linkLabel}
+          >
+            אין לך חשבון? הרשמה
+          </Button>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -103,39 +112,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     elevation: 5
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.goodBuyGreen,
-    marginBottom: 20,
-    textAlign: 'center'
+    textAlign: 'center',
+    marginBottom: 20
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-    fontSize: 16
-  },
-  inputError: { borderColor: 'red' },
-  error: { color: 'red', marginBottom: 12, fontSize: 14, textAlign: 'center' },
-  button: {
-    backgroundColor: COLORS.goodBuyGreen,
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginTop: 10,
-    alignItems: 'center'
-  },
-  buttonPressed: { opacity: 0.8 },
-  buttonDisabled: { backgroundColor: '#a5d6a7' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { marginTop: 12, alignItems: 'center' },
-  linkText: { color: COLORS.goodBuyGreen, fontSize: 14 }
+  input: { marginBottom: 8 },
+  button: { marginTop: 16, borderRadius: 8 },
+  buttonContent: { paddingVertical: 8 },
+  buttonLabel: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  link: { marginTop: 8 },
+  linkLabel: { color: COLORS.goodBuyGreen }
 })

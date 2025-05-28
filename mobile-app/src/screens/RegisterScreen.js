@@ -1,15 +1,19 @@
+// 📁 mobile-app/src/screens/RegisterScreen.js
+
 import React, { useState } from 'react'
 import {
   SafeAreaView,
   ScrollView,
   View,
-  TextInput,
-  Text,
-  Pressable,
-  ActivityIndicator,
   StyleSheet,
   Alert
 } from 'react-native'
+import {
+  Text,
+  TextInput,
+  HelperText,
+  Button
+} from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigation } from '@react-navigation/native'
 import { COLORS } from '../styles/colors'
@@ -35,15 +39,14 @@ export default function RegisterScreen() {
     /[^A-Za-z0-9]/.test(p)
 
   const handleSignUp = async () => {
-    // clear previous
-    setErrors({})
-
-    // client-side validation
     const clientErrors = {}
-    if (!isEmailValid(email))      clientErrors.email = 'פורמט אימייל לא תקין'
-    if (!isUsernameValid(username)) clientErrors.username = '3–20 תווים: אותיות, ספרות או קו תחתון בלבד'
-    if (!isPasswordValid(password)) clientErrors.password = '8+ תווים, אות, אות גדולה, מספר, תו מיוחד'
-
+    if (!isEmailValid(email)) clientErrors.email = 'פורמט אימייל לא תקין'
+    if (!isUsernameValid(username))
+      clientErrors.username =
+        'שם משתמש: 3–20 תווים, אותיות/ספרות/_ בלבד'
+    if (!isPasswordValid(password))
+      clientErrors.password =
+        'סיסמה: מינימום 8 תווים, אות קטנה, גדולה, ספרה ותו מיוחד'
     if (Object.keys(clientErrors).length) {
       setErrors(clientErrors)
       return
@@ -52,7 +55,9 @@ export default function RegisterScreen() {
     setLoading(true)
     try {
       const { message } = await register(email, username, password)
-      Alert.alert('הצלחה', message, [{ text: 'אישור', onPress: () => navigation.goBack() }])
+      Alert.alert('הצלחה', message, [
+        { text: 'אישור', onPress: () => navigation.goBack() }
+      ])
     } catch (e) {
       const data = e.response?.data
       if (data?.errors) {
@@ -71,58 +76,72 @@ export default function RegisterScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
+          {/* custom styled title */}
           <Text style={styles.title}>הרשמה</Text>
 
-          {/* Email */}
           <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            placeholder="Email"
-            keyboardType="email-address"
-            autoCapitalize="none"
+            label="Email"
+            mode="outlined"
             value={email}
             onChangeText={setEmail}
-          />
-          {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-
-          {/* Username */}
-          <TextInput
-            style={[styles.input, errors.username && styles.inputError]}
-            placeholder="Username"
+            keyboardType="email-address"
             autoCapitalize="none"
+            error={!!errors.email}
+            style={styles.input}
+          />
+          <HelperText type={errors.email ? 'error' : 'info'}>
+            {errors.email || 'דוגמה: user@example.com'}
+          </HelperText>
+
+          <TextInput
+            label="Username"
+            mode="outlined"
             value={username}
             onChangeText={setUsername}
+            autoCapitalize="none"
+            error={!!errors.username}
+            style={styles.input}
           />
-          {errors.username && <Text style={styles.error}>{errors.username}</Text>}
+          <HelperText type={errors.username ? 'error' : 'info'}>
+            {errors.username || '3–20 תווים, אותיות/ספרות/_ בלבד'}
+          </HelperText>
 
-          {/* Password */}
           <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
-            placeholder="Password"
-            secureTextEntry
+            label="Password"
+            mode="outlined"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
+            error={!!errors.password}
+            style={styles.input}
           />
-          {errors.password && <Text style={styles.error}>{errors.password}</Text>}
+          <HelperText type={errors.password ? 'error' : 'info'}>
+            {errors.password ||
+              '8+ תווים, אות קטנה, גדולה, ספרה ותו מיוחד'}
+          </HelperText>
 
-          {/* Submit */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-              (loading || !email || !username || !password) && styles.buttonDisabled
-            ]}
+          <Button
+            mode="contained"
             onPress={handleSignUp}
+            loading={loading}
             disabled={loading || !email || !username || !password}
+            style={styles.button}
+            contentStyle={styles.buttonContent}
+            labelStyle={styles.buttonLabel}
+            buttonColor={COLORS.goodBuyGreen}         // pressed & normal color
+            rippleColor="rgba(255,255,255,0.3)"        // lighter ripple
           >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>הרשמה</Text>
-            }
-          </Pressable>
+            הרשמה
+          </Button>
 
-          <Pressable onPress={() => navigation.goBack()} style={styles.link}>
-            <Text style={styles.linkText}>יש לך חשבון? התחבר</Text>
-          </Pressable>
+          <Button
+            onPress={() => navigation.goBack()}
+            uppercase={false}
+            style={styles.link}
+            labelStyle={styles.linkLabel}
+          >
+            יש לך חשבון? התחבר
+          </Button>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -136,39 +155,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     elevation: 5
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.goodBuyGreen,
-    marginBottom: 20,
-    textAlign: 'center'
+    textAlign: 'center',
+    marginBottom: 20
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-    fontSize: 16
-  },
-  inputError: { borderColor: 'red' },
-  error: { color: 'red', marginBottom: 8, fontSize: 14 },
-  button: {
-    backgroundColor: COLORS.goodBuyGreen,
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginTop: 10,
-    alignItems: 'center'
-  },
-  buttonPressed: { opacity: 0.8 },
-  buttonDisabled: { backgroundColor: '#a5d6a7' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  link: { marginTop: 12, alignItems: 'center' },
-  linkText: { color: COLORS.goodBuyGreen, fontSize: 14 }
+  input: { marginBottom: 8 },
+  button: { marginTop: 16, borderRadius: 8 },
+  buttonContent: { paddingVertical: 8 },
+  buttonLabel: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  link: { marginTop: 8 },
+  linkLabel: { color: COLORS.goodBuyGreen }
 })

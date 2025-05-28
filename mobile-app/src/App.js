@@ -17,6 +17,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
+import { Provider as PaperProvider } from 'react-native-paper'
+
 import { API_BASE } from './config'
 
 MaterialCommunityIcons.loadFont()
@@ -137,12 +139,13 @@ function Root() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <Root />
-      </NavigationContainer>
-    </AuthProvider>
+    <PaperProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <Root />
+        </NavigationContainer>
+      </AuthProvider>
+    </PaperProvider>
   )
 }
-
 const styles = StyleSheet.create({})
