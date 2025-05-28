@@ -192,7 +192,7 @@ async function worker() {
         if (name.toLowerCase() === 'item') {
           curr = {
             priceFile: pfId,
-            storeRef,               // <-- הוספת השדה storeRef
+            storeRef,
             chainId:   chainIdRaw,
             chainName: chainInfo.chainName
           };
@@ -209,7 +209,7 @@ async function worker() {
         if (name.toLowerCase() === 'item' && curr) {
           batch.push({
             priceFile:           curr.priceFile,
-            storeRef:            curr.storeRef,    // <-- הוספת השדה storeRef
+            storeRef:            curr.storeRef,
             chainId:             curr.chainId,
             chainName:           curr.chainName,
             itemCode:            String(curr.ItemCode),
