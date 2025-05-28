@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     await SecureStore.deleteItemAsync('token')
+    await SecureStore.deleteItemAsync('refreshToken')
     setToken(null)
     applyAuth(null)
   }, [applyAuth])
@@ -34,29 +35,42 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
       response => response,
-      error => {
-        if (error.response?.status === 401) {
-          logout()
+      async error => {
+        const originalRequest = error.config
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true
+          const rt = await SecureStore.getItemAsync('refreshToken')
+          if (rt) {
+            try {
+              const { data } = await axios.post('/auth/refresh', { refreshToken: rt })
+              await SecureStore.setItemAsync('token', data.accessToken)
+              setToken(data.accessToken)
+              applyAuth(data.accessToken)
+              originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+              return axios(originalRequest)
+            } catch (err) {
+              await logout()
+            }
+          } else {
+            await logout()
+          }
         }
         return Promise.reject(error)
       }
     )
     return () => axios.interceptors.response.eject(interceptorId)
-  }, [logout])
+  }, [applyAuth, logout])
 
   const login = async (username, password) => {
-    console.log('🚌 sending POST /auth/login')
     const { data } = await axios.post('/auth/login', { username, password })
-    console.log('🚚 login 2xx')
-    await SecureStore.setItemAsync('token', data.token)
-    setToken(data.token)
-    applyAuth(data.token)
+    await SecureStore.setItemAsync('token', data.accessToken)
+    await SecureStore.setItemAsync('refreshToken', data.refreshToken)
+    setToken(data.accessToken)
+    applyAuth(data.accessToken)
   }
 
   const register = async (email, username, password) => {
-    console.log('🚌 sending POST /auth/register')
     await axios.post('/auth/register', { email, username, password })
-    console.log('🚚 register 2xx')
   }
 
   return (

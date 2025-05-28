@@ -13,10 +13,14 @@ import RecommendationScreen from './screens/RecommendationsScreen'
 import PriceComparisonScreen from './screens/PriceComparisonScreen'
 import { COLORS } from './styles/colors'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
 import { API_BASE } from './config'
+
+MaterialCommunityIcons.loadFont()
+
 
 axios.defaults.baseURL = API_BASE
 const socket = io(API_BASE)
