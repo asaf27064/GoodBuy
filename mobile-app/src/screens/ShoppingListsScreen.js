@@ -78,19 +78,18 @@ export const ShoppingListStack = () => (
       headerTintColor: COLORS.white,
       headerTitleStyle: { fontWeight: 'bold' },
       headerTitleAlign: 'center',
-      headerRight: () => (
+
+      // Move hamburger to the left to utilize safe area
+      headerLeft: () => (
         <TouchableOpacity
           onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-          style={{ marginRight: 20, padding: 8 }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.menuButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <MaterialCommunityIcons
-            name="menu"
-            size={24}
-            color={COLORS.white}
-          />
+          <MaterialCommunityIcons name="menu" size={24} color={COLORS.white} />
         </TouchableOpacity>
-      )
+      ),
+      headerLeftContainerStyle: { paddingLeft: 16 }
     })}
   >
     <Stack.Screen
@@ -136,5 +135,8 @@ const styles = StyleSheet.create({
     right: 20,
     padding: 20,
     borderRadius: 20
+  },
+  menuButton: {
+    padding: 8
   }
 })
