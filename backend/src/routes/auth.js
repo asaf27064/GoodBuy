@@ -6,7 +6,9 @@ const {
   generateRefreshToken,
   verifyToken
 } = require('../utils/tokenService')
+const auth = require('../middleware/auth')
 
+// POST /auth/register
 router.post('/register', async (req, res) => {
   const { email, username, password } = req.body
   if (!email || !username || !password)
@@ -19,6 +21,7 @@ router.post('/register', async (req, res) => {
   res.status(201).json({ ok: true })
 })
 
+// POST /auth/login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body
   const user = await User.findOne({ username })
@@ -33,6 +36,7 @@ router.post('/login', async (req, res) => {
   res.json({ accessToken, refreshToken })
 })
 
+// POST /auth/refresh
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.body
   if (!refreshToken) return res.status(401).json({ message: 'Missing token.' })
@@ -50,21 +54,17 @@ router.post('/refresh', async (req, res) => {
   }
 })
 
-router.post('/logout', async (req, res) => {
-  const { refreshToken } = req.body
-  if (!refreshToken) return res.status(400).json({ message: 'Missing token.' })
+// POST /auth/logout
+router.post('/logout', auth, async (req, res) => {
+  req.user.refreshToken = null
+  await req.user.save()
+  res.status(200).json({ ok: true })
+})
 
-  try {
-    const payload = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET)
-    const user = await User.findById(payload.sub)
-    if (user) {
-      user.refreshToken = null
-      await user.save()
-    }
-    res.status(200).json({ ok: true })
-  } catch {
-    res.status(400).json({ message: 'Invalid token.' })
-  }
+// GET /auth/me
+router.get('/me', auth, (req, res) => {
+  const { _id, email, username, location, createdAt } = req.user
+  res.json({ user: { id: _id, email, username, location, createdAt } })
 })
 
 module.exports = router

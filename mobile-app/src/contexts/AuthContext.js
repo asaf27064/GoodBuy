@@ -26,11 +26,18 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     ;(async () => {
       const t = await SecureStore.getItemAsync('token')
-      setToken(t)
-      applyAuth(t)
+      if (t) {
+        applyAuth(t)
+        try {
+          await axios.get('/auth/me')
+          setToken(t)
+        } catch {
+          logout()
+        }
+      }
       setLoading(false)
     })()
-  }, [applyAuth])
+  }, [applyAuth, logout])
 
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
@@ -44,11 +51,10 @@ export const AuthProvider = ({ children }) => {
             try {
               const { data } = await axios.post('/auth/refresh', { refreshToken: rt })
               await SecureStore.setItemAsync('token', data.accessToken)
-              setToken(data.accessToken)
               applyAuth(data.accessToken)
               originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
               return axios(originalRequest)
-            } catch (err) {
+            } catch {
               await logout()
             }
           } else {
