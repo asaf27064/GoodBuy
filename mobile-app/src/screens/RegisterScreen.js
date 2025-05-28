@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigation } from '@react-navigation/native'
-import { COLORS } from '../styles/colors' // נניח שהגדרת צבעים כמו goodBuyGreen, gray וכו'
+import { COLORS } from '../styles/colors'
 
 export default function RegisterScreen() {
   const { register } = useAuth()
@@ -24,7 +24,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  // client-side validators (same as before)...
+  // client-side validators
   const isEmailValid = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
   const isUsernameValid = u => /^[a-zA-Z0-9_]{3,20}$/.test(u)
   const isPasswordValid = p =>
