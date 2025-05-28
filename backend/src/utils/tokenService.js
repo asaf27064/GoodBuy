@@ -1,4 +1,3 @@
-// 📁 backend/src/utils/tokenService.js
 const jwt = require('jsonwebtoken')
 
 const generateAccessToken = userId =>
