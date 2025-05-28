@@ -84,7 +84,8 @@ async function master() {
     await Promise.all([
       coll.createIndex({ priceFile: 1, itemCode: 1 }),
       coll.createIndex({ itemCode: 1, chainId: 1 }),
-      coll.createIndex({ itemPrice: 1 })
+      coll.createIndex({ itemPrice: 1 }),
+      coll.createIndex({ storeRef: 1, itemCode: 1 })
     ]);
   }
 
@@ -191,6 +192,7 @@ async function worker() {
         if (name.toLowerCase() === 'item') {
           curr = {
             priceFile: pfId,
+            storeRef,               // <-- הוספת השדה storeRef
             chainId:   chainIdRaw,
             chainName: chainInfo.chainName
           };
@@ -207,6 +209,7 @@ async function worker() {
         if (name.toLowerCase() === 'item' && curr) {
           batch.push({
             priceFile:           curr.priceFile,
+            storeRef:            curr.storeRef,    // <-- הוספת השדה storeRef
             chainId:             curr.chainId,
             chainName:           curr.chainName,
             itemCode:            String(curr.ItemCode),
