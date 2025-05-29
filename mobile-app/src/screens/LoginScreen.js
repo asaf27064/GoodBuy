@@ -1,5 +1,3 @@
-// 📁 mobile-app/src/screens/LoginScreen.js
-
 import React, { useState, useCallback } from 'react'
 import {
   SafeAreaView,

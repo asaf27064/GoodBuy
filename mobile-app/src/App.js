@@ -1,128 +1,151 @@
-import React, { useState, useEffect } from 'react'
-import { TouchableOpacity, StyleSheet } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { StyleSheet, TouchableOpacity } from 'react-native'
 import axios from 'axios'
 import io from 'socket.io-client'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import { MotiView } from 'moti'
+
+// Navigation
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer'
-import HomeScreen from './screens/HomeScreen'
+
+// Screens
 import { ShoppingListStack } from './screens/ShoppingListsScreen'
-import ShoppingHistoryScreen from './screens/ShoppingHistoryScreen'
 import RecommendationScreen from './screens/RecommendationsScreen'
 import PriceComparisonScreen from './screens/PriceComparisonScreen'
-import { COLORS } from './styles/colors'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import ShoppingHistoryScreen from './screens/ShoppingHistoryScreen'
 
+// Auth
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginScreen from './screens/LoginScreen'
 import RegisterScreen from './screens/RegisterScreen'
-import { Provider as PaperProvider } from 'react-native-paper'
 
+// UI Theme & Provider
+import { Provider as PaperProvider, DefaultTheme, useTheme } from 'react-native-paper'
+import paperTheme from './theme/paperTheme'
+
+// Config & Styles
 import { API_BASE } from './config'
+import { COLORS } from './styles/colors'
 
 MaterialCommunityIcons.loadFont()
-
-
 axios.defaults.baseURL = API_BASE
 const socket = io(API_BASE)
 
+// Navigator instances
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
 const Drawer = createDrawerNavigator()
 
-function CustomDrawerContent(props) {
-  const { logout } = useAuth()
+// Animated icon component
+function AnimatedIcon({ name, color, size, focused }) {
   return (
-    <DrawerContentScrollView {...props}>
-      <DrawerItem
-        label="Logout"
-        onPress={() => {
-          logout()
-          props.navigation.closeDrawer()
-        }}
-      />
-    </DrawerContentScrollView>
+    <MotiView
+      animate={{ scale: focused ? 1.15 : 1 }}
+      transition={{ type: 'timing', duration: 200 }}
+    >
+      <MaterialCommunityIcons name={name} color={color} size={size} />
+    </MotiView>
   )
 }
 
-function Tabs() {
+// Bottom Tabs with floating curved bar
+function MainTabs() {
+  const { colors } = useTheme()
+  const badgeCount = 0
+
   return (
     <Tab.Navigator
-      screenOptions={({ navigation }) => ({
-        tabBarActiveTintColor: COLORS.goodBuyGreen,
-        tabBarInactiveTintColor: COLORS.white,
-        tabBarStyle: { backgroundColor: COLORS.goodBuyGray },
-        headerStyle: { backgroundColor: COLORS.goodBuyGreen },
-        headerTintColor: COLORS.white,
+      initialRouteName="ShopList"
+      screenOptions={({ navigation, route }) => ({
+        headerStyle: { backgroundColor: colors.primary },
+        headerTintColor: colors.onPrimary,
         headerTitleStyle: { fontWeight: 'bold' },
         headerRight: () => (
-          <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 16 }}>
-            <MaterialCommunityIcons name="menu" size={24} color={COLORS.white} />
+          <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
+            <MaterialCommunityIcons name="menu" size={24} color={colors.onPrimary} />
           </TouchableOpacity>
-        )
+        ),
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.onSurfaceDisabled,
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: 16,
+          left: 16,
+          right: 16,
+          elevation: 5,
+          backgroundColor: colors.surface,
+          borderRadius: 24,
+          height: 60,
+          borderTopWidth: 0,
+        },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        tabBarIcon: ({ color, size, focused }) => {
+          const icons = {
+            ShopList: 'script-text',
+            Recommend: 'thumb-up',
+            Compare: 'scale-unbalanced',
+            History: 'clipboard-text-clock',
+          }
+          return (
+            <AnimatedIcon
+              name={icons[route.name]}
+              color={color}
+              size={size}
+              focused={focused}
+            />
+          )
+        },
+        tabBarBadge: route.name === 'History' && badgeCount > 0 ? badgeCount : undefined,
       })}
     >
       <Tab.Screen
         name="ShopList"
         component={ShoppingListStack}
-        options={{
-          tabBarLabel: 'Shopping Lists',
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="script-text" color={color} size={size} />
-        }}
+        options={{ title: 'Shopping Lists' }}
       />
       <Tab.Screen
         name="Recommend"
         component={RecommendationScreen}
-        options={{
-          tabBarLabel: 'Suggestions',
-          title: 'Personalized Suggestions',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="thumb-up" color={color} size={size} />
-        }}
+        options={{ title: 'Suggestions' }}
       />
       <Tab.Screen
         name="Compare"
         component={PriceComparisonScreen}
-        options={{
-          tabBarLabel: 'Comparison',
-          title: 'Price Comparison',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="scale-unbalanced" color={color} size={size} />
-        }}
+        options={{ title: 'Comparison' }}
       />
       <Tab.Screen
         name="History"
         component={ShoppingHistoryScreen}
-        options={{
-          tabBarLabel: 'History',
-          title: 'Purchase History',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="clipboard-text-clock" color={color} size={size} />
-        }}
+        options={{ title: 'History' }}
       />
     </Tab.Navigator>
   )
 }
 
-function MainApp() {
-  const [items, setItems] = useState([])
-
-  useEffect(() => {
-    socket.on('itemAdded', i => setItems(p => [...p, i]))
-    return () => socket.off('itemAdded')
-  }, [])
-
+// Drawer with custom logout
+function AppDrawer() {
+  const { logout } = useAuth()
   return (
     <Drawer.Navigator
       drawerPosition="right"
-      drawerContent={props => <CustomDrawerContent {...props} />}
       screenOptions={{ headerShown: false }}
+      drawerContent={(props) => (
+        <DrawerContentScrollView {...props}>
+          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer() }} />
+        </DrawerContentScrollView>
+      )}
     >
-      <Drawer.Screen name="Home" component={Tabs} />
+      <Drawer.Screen name="Home" component={MainTabs} />
     </Drawer.Navigator>
   )
 }
 
-function AuthRoutes() {
+// Auth stack for login/register
+function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
@@ -131,21 +154,26 @@ function AuthRoutes() {
   )
 }
 
-function Root() {
+// Root decides which flow
+function RootNavigator() {
   const { token, loading } = useAuth()
   if (loading) return null
-  return token ? <MainApp /> : <AuthRoutes />
+  return token ? <AppDrawer /> : <AuthStack />
 }
 
+// Main App entry
 export default function App() {
   return (
-    <PaperProvider>
+    <PaperProvider theme={paperTheme}>
       <AuthProvider>
         <NavigationContainer>
-          <Root />
+          <RootNavigator />
         </NavigationContainer>
       </AuthProvider>
     </PaperProvider>
   )
 }
-const styles = StyleSheet.create({})
+
+const styles = StyleSheet.create({
+  menuButton: { marginRight: 16 },
+})

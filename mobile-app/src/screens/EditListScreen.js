@@ -5,6 +5,8 @@ import globalStyles from '../styles/globalStyles';
 import ProductListItem from '../components/EditListScreenItem';
 import { COLORS } from '../styles/colors';
 import debounce from 'lodash/debounce'; // delay requests being sent to the sever. TODO: add limit on the server side.
+import { API_BASE } from '../config'
+axios.defaults.baseURL = API_BASE
 
 
 const { height } = Dimensions.get('window');
@@ -96,7 +98,7 @@ function EditListScreen({route}) {
         //setLoading(true);
         console.log("Attempting to search products...");
         try {
-            const response = await axios.get('http://192.168.0.105:3000/api/Products/search/' + productName);
+            const response = await axios.get(`${API_BASE}/api/Products/search/` + productName);
             setSearchMatches(response.data.results);
         } catch (err) {
             console.error('Error getting products:', err);
@@ -133,7 +135,7 @@ function EditListScreen({route}) {
         console.log(data);
 
         try {
-            const response = await axios.put('http://192.168.0.105:3000/api/ShoppingLists/' + currList._id,  data);
+            const response = await axios.put(`${API_BASE}/api/ShoppingLists/${currList._id}`,  data);
 
             console.log("changes saved");
             initialProducts.current = JSON.parse(JSON.stringify(products));

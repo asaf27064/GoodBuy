@@ -49,7 +49,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`))
 })
 
-/*––– existing routes –––*/
 const itemsRoute = require('./routes/Items')
 const historyRoute = require('./routes/History')
 app.use('/items', itemsRoute)
@@ -65,7 +64,6 @@ app.use('/api/ShoppingLists', shoppingListRoutes)
 app.use('/api/Stores', storeRoutes)
 app.use('/api/Products', productRoutes)
 
-/*––– your auth routes – lowercase “auth” –––*/
 const authRoutes = require('./routes/auth')
 app.use('/auth', authRoutes)
 
