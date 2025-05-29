@@ -1,57 +1,34 @@
-import { StyleSheet } from "react-native-web";
-import { COLORS } from "./colors";
+import { StyleSheet } from 'react-native'
 
-const globalStyles = StyleSheet.create({
+export default theme =>
+  StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#171717'
-    },
-    header: {
-      fontSize: 24,
-      marginBottom: 10
-    },
-    item: {
-      fontSize: 18,
-      marginVertical: 5
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: '#ccc',
-      padding: 10,
-      marginVertical: 10
-    },
-    footer: {
-        backgroundColor: 'red',
-        width: '100%',
-        height: '12%',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'flex-start',
-        position: 'absolute',
-        bottom: 0
+      backgroundColor: theme.colors.background,
     },
     shopList: {
-      margin: '10',
+      marginTop: 10,
       flex: 1,
       alignItems: 'center',
-      backgroundColor: "gray"
+      backgroundColor: theme.colors.surfaceVariant,
+      borderRadius: theme.roundness,
     },
-    confirmBtn: {
-      backgroundColor: COLORS.goodBuyGreen,
-      padding: 10,
-      margin: 5,
-      borderRadius: 10
+    addListBtn: {
+      backgroundColor: theme.colors.primary,
+      position: 'absolute',
+      right: 20,
+      padding: 20,
+      borderRadius: theme.roundness,
+      zIndex: 10,
+      elevation: 10,
     },
-
     headerText: {
       fontSize: 20,
       fontWeight: 'bold',
-      color: 'white'
-    }, 
+      color: theme.colors.onBackground,
+    },
     text: {
-      color: 'white'
-    }, 
-    
-  });
-
-export default globalStyles;
+      color: theme.colors.onBackground,
+    },
+    // any other shared styles...
+  })

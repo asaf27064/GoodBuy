@@ -1,5 +1,3 @@
-// 📁 mobile-app/src/screens/RegisterScreen.js
-
 import React, { useState } from 'react'
 import {
   SafeAreaView,
@@ -12,13 +10,16 @@ import {
   Text,
   TextInput,
   HelperText,
-  Button
+  Button,
+  useTheme
 } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigation } from '@react-navigation/native'
-import { COLORS } from '../styles/colors'
 
 export default function RegisterScreen() {
+  const theme = useTheme()
+  const styles = makeStyles(theme)
+
   const { register } = useAuth()
   const navigation = useNavigation()
 
@@ -28,7 +29,6 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
-  // client-side validators
   const isEmailValid = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
   const isUsernameValid = u => /^[a-zA-Z0-9_]{3,20}$/.test(u)
   const isPasswordValid = p =>
@@ -76,7 +76,6 @@ export default function RegisterScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
-          {/* custom styled title */}
           <Text style={styles.title}>הרשמה</Text>
 
           <TextInput
@@ -87,7 +86,8 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             error={!!errors.email}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.email ? 'error' : 'info'}>
             {errors.email || 'דוגמה: user@example.com'}
@@ -100,7 +100,8 @@ export default function RegisterScreen() {
             onChangeText={setUsername}
             autoCapitalize="none"
             error={!!errors.username}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.username ? 'error' : 'info'}>
             {errors.username || '3–20 תווים, אותיות/ספרות/_ בלבד'}
@@ -113,7 +114,8 @@ export default function RegisterScreen() {
             onChangeText={setPassword}
             secureTextEntry
             error={!!errors.password}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            outlineStyle={{ borderRadius: theme.roundness }}
           />
           <HelperText type={errors.password ? 'error' : 'info'}>
             {errors.password ||
@@ -125,11 +127,11 @@ export default function RegisterScreen() {
             onPress={handleSignUp}
             loading={loading}
             disabled={loading || !email || !username || !password}
-            style={styles.button}
+            style={[styles.button, { borderRadius: theme.roundness }]}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
-            buttonColor={COLORS.goodBuyGreen}         // pressed & normal color
-            rippleColor="rgba(255,255,255,0.3)"        // lighter ripple
+            buttonColor={theme.colors.primary}
+            rippleColor="rgba(255,255,255,0.3)"
           >
             הרשמה
           </Button>
@@ -138,7 +140,7 @@ export default function RegisterScreen() {
             onPress={() => navigation.goBack()}
             uppercase={false}
             style={styles.link}
-            labelStyle={styles.linkLabel}
+            labelStyle={[styles.linkLabel, { color: theme.colors.primary }]}
           >
             יש לך חשבון? התחבר
           </Button>
@@ -148,26 +150,48 @@ export default function RegisterScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.goodBuyGrayLight },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    elevation: 5
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.goodBuyGreen,
-    textAlign: 'center',
-    marginBottom: 20
-  },
-  input: { marginBottom: 8 },
-  button: { marginTop: 16, borderRadius: 8 },
-  buttonContent: { paddingVertical: 8 },
-  buttonLabel: { fontSize: 16, fontWeight: '600', color: '#fff' },
-  link: { marginTop: 8 },
-  linkLabel: { color: COLORS.goodBuyGreen }
-})
+function makeStyles(theme) {
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: theme.colors.background
+    },
+    scroll: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: 20
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.roundness,
+      padding: 20,
+      elevation: 5
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.primary,
+      textAlign: 'center',
+      marginBottom: 20
+    },
+    input: {
+      marginBottom: 8
+    },
+    button: {
+      marginTop: 16
+    },
+    buttonContent: {
+      paddingVertical: 8
+    },
+    buttonLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.onPrimary || '#fff'
+    },
+    link: {
+      marginTop: 8
+    },
+    linkLabel: {
+    }
+  })
+}

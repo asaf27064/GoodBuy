@@ -6,12 +6,14 @@ import {
   StyleSheet,
   ActivityIndicator
 } from 'react-native'
-import { Text, TextInput, HelperText, Button } from 'react-native-paper'
+import { Text, TextInput, HelperText, Button, useTheme } from 'react-native-paper'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { COLORS } from '../styles/colors'
 
 export default function LoginScreen() {
+  const theme = useTheme()
+  const styles = makeStyles(theme)
+
   const { login } = useAuth()
   const navigation = useNavigation()
 
@@ -20,7 +22,6 @@ export default function LoginScreen() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Clear inputs & errors when screen focused
   useFocusEffect(
     useCallback(() => {
       setUsername('')
@@ -34,7 +35,6 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       await login(username, password)
-      // on success, navigation handled by AuthContext/Root
     } catch (e) {
       const msg = e.response?.data?.message || 'אירעה שגיאה, נסה שוב מאוחר יותר'
       setError(msg)
@@ -56,7 +56,8 @@ export default function LoginScreen() {
             onChangeText={setUsername}
             autoCapitalize="none"
             error={!!error}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            outlineStyle={{ borderRadius: theme.roundness }}
           />
 
           <TextInput
@@ -66,24 +67,21 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry
             error={!!error}
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            outlineStyle={{ borderRadius: theme.roundness }}
           />
 
-          {error ? (
-            <HelperText type="error" visible>
-              {error}
-            </HelperText>
-          ) : null}
+          {error ? <HelperText type="error" visible>{error}</HelperText> : null}
 
           <Button
             mode="contained"
             onPress={handleLogin}
             loading={loading}
             disabled={loading || !username || !password}
-            style={styles.button}
+            style={[styles.button, { borderRadius: theme.roundness }]}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
-            buttonColor={COLORS.goodBuyGreen}
+            buttonColor={theme.colors.primary}
             rippleColor="rgba(255,255,255,0.3)"
           >
             התחבר
@@ -93,7 +91,7 @@ export default function LoginScreen() {
             onPress={() => navigation.navigate('Register')}
             uppercase={false}
             style={styles.link}
-            labelStyle={styles.linkLabel}
+            labelStyle={[styles.linkLabel, { color: theme.colors.primary }]}
           >
             אין לך חשבון? הרשמה
           </Button>
@@ -103,26 +101,48 @@ export default function LoginScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.goodBuyGrayLight },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    elevation: 5
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.goodBuyGreen,
-    textAlign: 'center',
-    marginBottom: 20
-  },
-  input: { marginBottom: 8 },
-  button: { marginTop: 16, borderRadius: 8 },
-  buttonContent: { paddingVertical: 8 },
-  buttonLabel: { fontSize: 16, fontWeight: '600', color: '#fff' },
-  link: { marginTop: 8 },
-  linkLabel: { color: COLORS.goodBuyGreen }
-})
+function makeStyles(theme) {
+  return StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: theme.colors.background
+    },
+    scroll: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: 20
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.roundness,
+      padding: 20,
+      elevation: 5
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.primary,
+      textAlign: 'center',
+      marginBottom: 20
+    },
+    input: {
+      marginBottom: 8
+    },
+    button: {
+      marginTop: 16
+    },
+    buttonContent: {
+      paddingVertical: 8
+    },
+    buttonLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.onPrimary || '#fff'
+    },
+    link: {
+      marginTop: 8
+    },
+    linkLabel: {
+    }
+  })
+}
