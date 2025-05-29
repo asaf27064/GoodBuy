@@ -14,3 +14,6 @@ backend/src/node_modules/mongodb/
 backend/src/node_modules/mongodb
 backend/src/priceFetch/DownloadsMissingPhotos
 backend/src/.env
+mobile-app/.expo/
+mobile-app/src/.expo/
+.expo/
