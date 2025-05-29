@@ -1,14 +1,28 @@
-import React from 'react';
-import { View, Text, Button, SafeAreaView } from 'react-native';
-import globalStyles from '../styles/globalStyles';
+import React, { useEffect, useState } from 'react'
+import { SafeAreaView, FlatList, Text } from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
+import axios from 'axios'
 
-function PriceComparisonScreen({navigation}) {
-    return (
-        <SafeAreaView style={globalStyles.container}>
-            <Button title="Return" onPress={() => { navigation.goBack(null)}} />
-            <Text>History</Text>
-            </SafeAreaView>
-    );
+export default function ShoppingHistoryScreen() {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
+  const [history, setHistory] = useState([])
+
+  useEffect(() => {
+    axios.get('/api/ShoppingHistory').then(r => setHistory(r.data))
+  }, [])
+
+  return (
+    <SafeAreaView style={styles.container}>
+
+      <FlatList
+        data={history}
+        keyExtractor={i => i.id}
+        renderItem={({ item }) => (
+          <Text style={styles.text}>{item.date}: {item.summary}</Text>
+        )}
+      />
+    </SafeAreaView>
+  )
 }
-
-export default PriceComparisonScreen;

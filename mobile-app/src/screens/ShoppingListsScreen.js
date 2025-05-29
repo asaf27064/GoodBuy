@@ -7,8 +7,9 @@ import {
   TouchableHighlight,
   SafeAreaView
 } from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import globalStyles from '../styles/globalStyles'
 import ShoppingList from '../components/ShoppingListScreenItem'
 import EditListScreen from './EditListScreen'
 import CheckListScreen from './CheckListScreen'
@@ -16,9 +17,6 @@ import EditHistoryScreen from './EditHistoryScreen'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import AddListModal from '../components/AddListModal'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import { COLORS } from '../styles/colors'
-import { API_BASE } from '../config'
-axios.defaults.baseURL = API_BASE
 
 MaterialCommunityIcons.loadFont()
 
@@ -27,16 +25,16 @@ const Stack = createNativeStackNavigator()
 export const ShoppingListStack = () => (
   <Stack.Navigator
     screenOptions={({ navigation }) => ({
-      headerStyle: { backgroundColor: COLORS.goodBuyGreen },
-      headerTintColor: COLORS.white,
+      headerStyle: { backgroundColor: '#00dc37' },
+      headerTintColor: '#fff',
       headerTitleStyle: { fontWeight: 'bold' },
       headerTitleAlign: 'center',
       headerRight: () => (
         <MaterialCommunityIcons.Button
           name="menu"
           size={28}
-          color={COLORS.white}
-          backgroundColor={COLORS.goodBuyGreen}
+          color="#fff"
+          backgroundColor="#00dc37"
           onPress={() => navigation.openDrawer()}
           iconStyle={{ marginRight: 0 }}
           style={{ paddingHorizontal: 16 }}
@@ -70,7 +68,10 @@ export const ShoppingListStack = () => (
 )
 
 export default function ShoppingListScreen({ navigation }) {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
   const insets = useSafeAreaInsets()
+
   const [isModalVisible, setModalVisible] = useState(false)
   const [shoppingLists, setShoppingLists] = useState([])
 
@@ -80,7 +81,7 @@ export default function ShoppingListScreen({ navigation }) {
   const createNewList = async (title, members, important) => {
     try {
       const { data } = await axios.post(
-        '${API_BASE}/api/ShoppingLists',
+        '/api/ShoppingLists',
         { title, members: [members], importantList: important }
       )
       setShoppingLists(prev => [...prev, data])
@@ -105,7 +106,7 @@ export default function ShoppingListScreen({ navigation }) {
   )
 
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <SafeAreaView style={styles.container}>
       <AddListModal
         isVisible={isModalVisible}
         onClose={handleCloseModal}
@@ -116,31 +117,11 @@ export default function ShoppingListScreen({ navigation }) {
         onPress={addList}
         style={[
           styles.addListBtn,
-          {
-            bottom: insets.bottom + 60 + 10
-          }
+          { bottom: insets.bottom + 60 + 10 }
         ]}
       >
-        <MaterialCommunityIcons name="plus" color={COLORS.white} size={28} />
+        <MaterialCommunityIcons name="plus" color="#fff" size={28} />
       </TouchableHighlight>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  shopList: {
-    flex: 1,
-    borderRadius: 10,
-    marginTop: 10,
-    backgroundColor: 'pink'
-  },
-  addListBtn: {
-    backgroundColor: COLORS.goodBuyGreen,
-    position: 'absolute',
-    right: 20,
-    padding: 20,
-    borderRadius: 20,
-    zIndex: 10,
-    elevation: 10
-  }
-})

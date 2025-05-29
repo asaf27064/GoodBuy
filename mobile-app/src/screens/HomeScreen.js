@@ -1,14 +1,17 @@
-import React from 'react';
-import { View, Text, Button, Touchable, TouchableHighlight, SafeAreaView } from 'react-native';
-import globalStyles from '../styles/globalStyles';
+import React from 'react'
+import { SafeAreaView, View, Text } from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
 
-function HomeScreen({navigation}) {
-    return (
-        <SafeAreaView style={globalStyles.container}>
-            <View><Text>Hello, Guy</Text></View>
-        </SafeAreaView>
-        
-    );
+export default function HomeScreen() {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View>
+        <Text style={styles.headerText}>Welcome Guy</Text>
+      </View>
+    </SafeAreaView>
+  )
 }
-
-export default HomeScreen;

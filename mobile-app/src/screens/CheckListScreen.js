@@ -1,61 +1,77 @@
-import React, {useState} from 'react';
-import { View, FlatList, Text, SafeAreaView, Touchable, TouchableHighlight, StyleSheet} from 'react-native';
-import globalStyles from '../styles/globalStyles';
-import ProductCheckListItem from '../components/CheckListScreenItem';
-import { COLORS } from '../styles/colors';
+import React, { useState } from 'react'
+import {
+  View,
+  FlatList,
+  Text,
+  SafeAreaView,
+  TouchableHighlight
+} from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import ProductCheckListItem from '../components/CheckListScreenItem'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 
-function CheckListScreen({route}) {
+MaterialCommunityIcons.loadFont()
 
-    const renderItem = ({item}) => {
+export default function CheckListScreen({ route }) {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
+  const insets = useSafeAreaInsets()
 
-        let checked = checkedProducts.has(item.product._id) ? true : false;
-        
+  const currList = route.params.list.listObj
+  const [checkedProducts, setCheckedProducts] = useState(new Set())
 
-        return (
-                <ProductCheckListItem product={item} checkStatus={checked} handleCheck={handleCheck}/>
-        );
-     }
+  const uncheckedItems = currList.products.filter(
+    p => !checkedProducts.has(p.product._id)
+  )
+  const checkedItems = currList.products.filter(p =>
+    checkedProducts.has(p.product._id)
+  )
 
+  const handleCheck = item => {
+    // … your existing logic
+  }
 
-    const currList = route.params.list.listObj
-    
-     // fetch current Items on the list from the server.
-    const [checkedProducts, setcheckedProducts] = useState(new Set());
-    const uncheckedItems = currList.products.filter(prod => !checkedProducts.has(prod.product._id));
-    const checkedItems = currList.products.filter(prod => checkedProducts.has(prod.product._id));
+  const renderItem = ({ item }) => (
+    <ProductCheckListItem
+      product={item}
+      checkStatus={checkedProducts.has(item.product._id)}
+      handleCheck={handleCheck}
+    />
+  )
 
-    //console.log(uncheckedItems);
-    //console.log(checkedItems);
-
-    const handleCheck = (item) => {
-        let updatedChecked = new Set(checkedProducts);
-
-        if (checkedProducts.has(item.product._id)){
-            updatedChecked.delete(item.product._id);
-        } else {
-            updatedChecked.add(item.product._id);
-        }
-
-        setcheckedProducts(updatedChecked);
-    }
-
-
-    return (
-        <SafeAreaView style={globalStyles.container}>
-            <Text style={{color: 'white'}}> Products to buy:</Text>
-            <FlatList data={[...uncheckedItems]} keyExtractor={(item) => item.product._id} renderItem={renderItem}/>
-            {checkedItems.length > 0 && (<Text style={{color: 'white'}}> Products bought:</Text>)}
-            <FlatList data={[...checkedItems]} keyExtractor={(item) => item.product._id} renderItem={renderItem}/>
-            <TouchableHighlight style={{backgroundColor: 'cyan'}}>
-                <Text> Finish Pruchase</Text>
-            </TouchableHighlight>
-        </SafeAreaView>
-    );
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerText}>Products to buy:</Text>
+      <FlatList
+        data={uncheckedItems}
+        keyExtractor={i => i.product._id}
+        renderItem={renderItem}
+      />
+      {checkedItems.length > 0 && (
+        <>
+          <Text style={styles.headerText}>Products bought:</Text>
+          <FlatList
+            data={checkedItems}
+            keyExtractor={i => i.product._id}
+            renderItem={renderItem}
+          />
+        </>
+      )}
+      <TouchableHighlight
+        style={[
+          styles.addListBtn,
+          {
+            bottom: insets.bottom + 60 + 10,
+            backgroundColor: theme.colors.secondary
+          }
+        ]}
+        onPress={() => {/* finish logic */}}
+      >
+        <Text style={styles.text}>Finish Purchase</Text>
+      </TouchableHighlight>
+    </SafeAreaView>
+  )
 }
-
-const styles = StyleSheet.create({
-
-
-})
-
-export default CheckListScreen;

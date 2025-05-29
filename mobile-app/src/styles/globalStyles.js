@@ -30,5 +30,4 @@ export default theme =>
     text: {
       color: theme.colors.onBackground,
     },
-    // any other shared styles...
   })
