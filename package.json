@@ -6,7 +6,6 @@
     "mobile-app/src"
   ],
   "scripts": {
-    "install-all": "npm install --workspaces",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
     "dev:backend": "npm --prefix backend/src run start",
     "dev:mobile": "npm --prefix mobile-app/src run start"
