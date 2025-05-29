@@ -1,5 +1,8 @@
 const router = require('express').Router()
 const c = require('../controllers/userController')
+const auth = require('../middleware/auth')
+
+router.use(auth)
 
 router.post('/', c.createUser)
 router.get('/', c.listUsers)
