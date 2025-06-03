@@ -1,10 +1,20 @@
 {
   "name": "goodbuy-monorepo",
   "private": true,
-  "workspaces": [
-    "backend/src",
-    "mobile-app/src"
-  ],
+  "workspaces": {
+    "packages": [
+      "backend/src",
+      "mobile-app/src"
+    ],
+    "nohoist": [
+      "**/react",
+      "**/react/*",
+      "**/react-native",
+      "**/react-native-renderer",
+      "**/react-dom",
+      "**/react-native-screens"
+    ]
+  },
   "scripts": {
     "dev": "npm run check-env && npm run check-config && concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
     "dev:backend": "npm run check-env && npm run check-config && npm --prefix backend/src run start",
@@ -14,5 +24,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
+  },
+  "dependencies": {
+    "openai": "^5.0.2"
   }
 }

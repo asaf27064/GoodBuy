@@ -5,11 +5,11 @@ const pLimit = require('p-limit').default;
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { S3Client, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
-const ItemImage = require('../models/ItemImage');
-const PriceItem = require('../models/PriceItem');
+const ItemImage = require('../Models/ItemImage');
+const PriceItem = require('../Models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-t
+
 const ALLOW_CHP_API     = process.env.CHP_API_ENABLED === 'true';
 const ALLOW_R2_UPLOAD   = process.env.R2_UPLOAD_ENABLED === 'true';
 

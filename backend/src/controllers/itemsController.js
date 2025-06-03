@@ -1,4 +1,4 @@
-const Item = require('../Models/item');
+const Item = require('../Models/PriceItem');
 const History = require('../Models/History');
 
 exports.getAllItems = async (req, res) => {
