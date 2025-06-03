@@ -1,7 +1,20 @@
 // File: service/recommendationLLM.js
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+
+const mongoose = require('mongoose');
 const { OpenAI } = require('openai');
+console.log(process.env.OPENAI_API_KEY)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Register models only if not already registered, using the exact same path casing as elsewhere
+if (!mongoose.models.Purchase) {
+  require('../Models/Purchase');
+}
+if (!mongoose.models.PriceItem) {
+  require('../Models/PriceItem');
+}
 
 const {
   getUserDetailedHistory,
@@ -84,7 +97,7 @@ async function getRecommendationsWithTimePatterns(userId) {
 
   // 4. Call OpenAI’s chat completion endpoint
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o', // or 'gpt-3.5-turbo' if you don’t have GPT-4 access
+    model: 'gpt-4.1', // or 'gpt-3.5-turbo' if you don’t have GPT-4 access
     messages: [
       { role: 'system', content: 'You are a grocery shopping recommendation engine.' },
       { role: 'user', content: prompt }
@@ -104,3 +117,39 @@ async function getRecommendationsWithTimePatterns(userId) {
 }
 
 module.exports = { getRecommendationsWithTimePatterns };
+
+
+// ─── Quick Self-Test Block ───────────────────────────────────────────────────
+//
+// If you run this file directly (node service/recommendationLLM.js), it will
+// connect to MongoDB, call getRecommendationsWithTimePatterns with your test
+// userId, and log the result. No HTTP server required here.
+//
+// Replace the userId below with your real ObjectId string for testing.
+//
+if (require.main === module) {
+  (async () => {
+    try {
+      // 1. Connect to MongoDB
+      const uri = process.env.MONGO_URI;
+      if (!uri) {
+        console.error('❌ MONGO_URI is not defined in .env');
+        process.exit(1);
+      }
+      await mongoose.connect(uri);
+      console.log('✅ Connected to MongoDB');
+
+      // 2. Hard-code your test userId here:
+      const testUserId = '683efa8b09008769df8b3213';
+
+      // 3. Call the recommendation function
+      const recs = await getRecommendationsWithTimePatterns(testUserId);
+      console.log('LLM returned:', recs);
+
+      process.exit(0);
+    } catch (err) {
+      console.error('❌ Error in test block:', err);
+      process.exit(1);
+    }
+  })();
+}
