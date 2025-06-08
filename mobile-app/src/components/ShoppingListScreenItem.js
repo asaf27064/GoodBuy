@@ -35,22 +35,44 @@ const ShoppingListScreenItem = ({listObj, listId, members, title, products, edit
         navigation.navigate('EditHistory', {list: {listObj}})
     }
 
+    const goToSuggestions = () => {
+        //console.log({listId})
+        navigation.navigate('Recommend', {list: {listObj}})
+    }
+
+    const goToPriceComparison = () => {
+        //console.log({listId})
+        navigation.navigate('Compare', {list: {listObj}})
+    }
+
 
     return (
         <View style={styles.container}>
-            <View style={{flex: 3}}>
+            <View style={styles.textContainer}>
                 <Text style={globalStyles.headerText}>{title}</Text>
                 <Text>members: {members.map((user) => user.username + ', ') /* remove ',' from last member*/} </Text>
             </View>
-            <TouchableHighlight onPress={goToCheckList} style={styles.btn}>
-                <MaterialCommunityIcons name='check-circle-outline'/>
-            </TouchableHighlight>
-            <TouchableHighlight onPress={goToEditList} style={styles.btn}>
-            <MaterialCommunityIcons name='file-edit-outline'/>
-            </TouchableHighlight>
-            <TouchableHighlight onPress={goToEditHistory} style={styles.btn}>
-            <MaterialCommunityIcons name='history'/>
-            </TouchableHighlight>
+            <View style={styles.buttonsContainer}>
+                <TouchableHighlight onPress={goToEditList} style={styles.btn}>
+                    <MaterialCommunityIcons name='file-edit-outline' size={30}/>
+                </TouchableHighlight>
+                <View style={styles.separator} />
+                <TouchableHighlight onPress={goToSuggestions} style={styles.btn}>
+                    <MaterialCommunityIcons name='thumb-up-outline' size={30}/>
+                </TouchableHighlight>
+                <View style={styles.separator} />
+                <TouchableHighlight onPress={goToPriceComparison} style={styles.btn}>
+                    <MaterialCommunityIcons name='scale-unbalanced'  size={30}/>
+                </TouchableHighlight>
+                <View style={styles.separator} />
+                <TouchableHighlight onPress={goToCheckList} style={styles.btn}>
+                    <MaterialCommunityIcons name='check-circle-outline' size={30}/>
+                </TouchableHighlight>
+                <View style={styles.separator} />
+                <TouchableHighlight onPress={goToEditHistory} style={styles.btn}>
+                    <MaterialCommunityIcons name='history' size={30}/>
+                </TouchableHighlight>
+            </View>
         </View>
     );
 
@@ -59,21 +81,32 @@ const ShoppingListScreenItem = ({listObj, listId, members, title, products, edit
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        margin: 5,
-        padding: 5,
         borderRadius: 10,
         backgroundColor: 'beige'
+    },
+
+    textContainer: {
+        flex: 1,
+        margin: 10
+    },
+
+    buttonsContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        borderBottomLeftRadius: 10,
+        borderBottomRightRadius: 10,
+        backgroundColor: 'red',
     },
     btn: {
         alignItems: 'center',
         justifyContent: 'center',
+        
         flex: 1,
-        backgroundColor: 'red',
-        margin: 5,
-        borderRadius: 10,
-        height: '100%'
+        padding: 20,
+    },
+    separator: {
+        backgroundColor: "black",
+        width: 1
     }
 })
 

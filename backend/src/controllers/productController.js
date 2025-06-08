@@ -1,5 +1,5 @@
-const Product = require('../Models/productModel');
-
+const Product = require('../models/productModel');
+const ProductWithPrice = require('../models/PriceItem')
 
 
 exports.getAllProducts = async (req, res) => {
@@ -12,9 +12,9 @@ exports.getAllProducts = async (req, res) => {
 };
 
 exports.getProductByName = async (req, res) => {
-  
+
   const  productName  = req.params.name;
-  console.log(productName);
+
   try {
     const productsMatched = await Product.find({
       name: { $regex: productName, $options: 'i' }  // equivalent to "WHERE name LIKE '...'"" in SQL. Case Insensitive.
@@ -117,4 +117,43 @@ exports.getProductByID = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+  };
+
+exports.getListPriceInStores = async (req, res) => {
+  try {
+
+    const  stores = JSON.parse(req.query.stores);
+    const  products = JSON.parse(req.query.products);
+    const itemCodes = products.map((item)=>(item.prodctId))
+    const pricesInStores = [];
+
+    console.log(req.query);
+    console.log(stores);
+    console.log(products);
+
+
+    const productsMatched = await ProductWithPrice.find({
+      itemCode: { $in: itemCodes },
+      storeRef: ObjectId(stores[0])
+    });
+
+    console.log(productsMatched);
+    console.log("beans")
+    pricesInStores.append({name: "store0", prices: productsMatched});
+    console.log("beans")
+     productsMatched = await ProductWithPrice.find({
+      itemCode: { $in: itemCodes },
+      storeRef: new ObjectId(stores[1])
+    });
+    console.log("beans")
+    pricesInStores.append({name: "store1", prices: productsMatched});
+    console.log("beans")
+    if (!pricesInStores) {
+        return res.status(404).json({ error: 'Product not found' });
+    }
+    console.log("beans")
+    res.json(pricesInStores);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+  };

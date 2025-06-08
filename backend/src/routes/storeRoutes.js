@@ -4,6 +4,8 @@ const router = express.Router();
 
 router.get('/', storeController.getAllItems);
 
+router.get('/store_search', storeController.searchStores);
+
 router.get('/:id', storeController.getItemByID);
 
 router.post('/', storeController.addItem);

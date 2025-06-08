@@ -1,5 +1,6 @@
-const ShoppingList = require('../Models/shoppingListModel');
-const User = require('../Models/userModel');
+const ShoppingList = require('../models/shoppingListModel');
+const User = require('../models/userModel');
+const shoppingListService = require('../services/shoppingListService');
 
 
 

@@ -42,7 +42,20 @@ export default function App() {
               tabBarLabel: 'Home',
               tabBarIcon:({focused,color,size}) => (
               <MaterialCommunityIcons name="home" color={color} size={size}/>)
-              }}/> */
+              }}/> 
+
+                /*<Tab.Screen name="Recommend" component={RecommendationScreen} options={{
+              title: "Personalized Suggestions",
+              tabBarLabel: 'Suggestions',
+              tabBarIcon:({focused,color,size}) => (
+                <MaterialCommunityIcons name="thumb-up" color={color} size={size}/>)
+                }}/>
+            <Tab.Screen name="Compare" component={PriceComparisonScreen} options={{
+              title: "Price Comparison",
+              tabBarLabel: 'Comparison',
+              tabBarIcon:({focused,color,size}) => (
+                <MaterialCommunityIcons name="scale-unbalanced" color={color} size={size}/>)
+                }}/>*/
       <NavigationContainer>
         <Tab.Navigator screenOptions={{
             tabBarActiveTintColor: COLORS.goodBuyGreen,
@@ -62,21 +75,9 @@ export default function App() {
               tabBarIcon:({focused,color,size}) => (
                 <MaterialCommunityIcons name="script-text" color={color} size={size}/>)
                 }}/>
-            <Tab.Screen name="Recommend" component={RecommendationScreen} options={{
-              title: "Personalized Suggestions",
-              tabBarLabel: 'Suggestions',
-              tabBarIcon:({focused,color,size}) => (
-                <MaterialCommunityIcons name="thumb-up" color={color} size={size}/>)
-                }}/>
-            <Tab.Screen name="Compare" component={PriceComparisonScreen} options={{
-              title: "Price Comparison",
-              tabBarLabel: 'Comparison',
-              tabBarIcon:({focused,color,size}) => (
-                <MaterialCommunityIcons name="scale-unbalanced" color={color} size={size}/>)
-                }}/>
             <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{
               title: "Pruchase History",
-              tabBarLabel: 'History',
+              tabBarLabel: 'Purchase History',
               tabBarIcon:({focused,color,size}) => (
                 <MaterialCommunityIcons name="clipboard-text-clock" color={color} size={size}/>)
                 }}/>

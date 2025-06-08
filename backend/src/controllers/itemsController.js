@@ -1,5 +1,5 @@
-const Item = require('../Models/item');
-const History = require('../Models/History');
+const Item = require('../models/item');
+const History = require('../models/History');
 
 exports.getAllItems = async (req, res) => {
     try {

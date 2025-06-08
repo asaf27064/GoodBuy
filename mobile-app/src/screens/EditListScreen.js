@@ -9,10 +9,9 @@ import debounce from 'lodash/debounce'; // delay requests being sent to the seve
 
 const { height } = Dimensions.get('window');
 
+const WAIT_TIME = 300;
+
 function EditListScreen({route}) {
-
-
-    const WAIT_TIME = 300;
 
     const renderItem = ({item}) => {
         return (
@@ -69,7 +68,8 @@ function EditListScreen({route}) {
     const [products, setProducts] = useState(currList.products);
     const initialProducts = useRef(JSON.parse(JSON.stringify(currList.products))); // track initial value without referencing the original.
 
-    // Something doesn't work here.
+
+    // Fix bug of displaying the wrong numbers upon deletion.
     const removeProduct = (productToRemove) => {
         let newProducts = [];
         newProducts = products.filter(e => e !== productToRemove);
@@ -81,12 +81,12 @@ function EditListScreen({route}) {
     const [loading, setLoading] = useState(false); // For trigerring loading animation and more TODO: use it.
 
     const handleInputChange = (productName) => {
-        console.log(productName);
+
         setSeachBarInput(productName);
-        fetchProducts(productName);
+        fetchProducts.current(productName);
     };
 
-    const fetchProducts = debounce(async function(productName) {
+    const fetchProducts = useRef(debounce(async function(productName) {
 
         // If input only contains whitespaces, ignore.
         if (productName.trim() === '') {
@@ -104,7 +104,8 @@ function EditListScreen({route}) {
             setLoading(false);
         }*/
 
-        }, WAIT_TIME); // wait for WAIT_TIME miliseconds during which the textInput is unchanged, before sending the request.
+        }, WAIT_TIME, { leading: false, trailing: true }) // wait for WAIT_TIME miliseconds during which the textInput is unchanged, before sending the request.
+    );
     
 
     const addNewProduct = async function(newProduct) {

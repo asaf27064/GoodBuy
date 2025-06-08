@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
-const pLimit = require('p-limit').default;
+const pLimit = require('p-limit');
 
 const basePageUrl = 'https://shop.hazi-hinam.co.il/Prices';
 const DOWNLOAD_DIR = path.join(__dirname, 'Downloads');

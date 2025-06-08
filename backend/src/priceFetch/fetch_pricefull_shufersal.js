@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const axios     = require('axios');
 const fs        = require('fs');
 const path      = require('path');
-const pLimit    = require('p-limit').default;
+const pLimit    = require('p-limit');
 
 (async () => {
   const mode    = process.argv[2] === 'update' ? 'update' : 'init';

@@ -67,11 +67,13 @@ const userRoutes = require('./routes/userRoutes');
 const shoppingListRoutes = require('./routes/shoppingListRoutes');
 const storeRoutes = require('./routes/storeRoutes')
 const productRoutes = require('./routes/productRoutes')
+const purchaseRoutes = require('./routes/purchaseRoutes')
 
 app.use('/api/Users', userRoutes);
 app.use('/api/ShoppingLists', shoppingListRoutes);
 app.use('/api/Stores', storeRoutes);
 app.use('/api/Products', productRoutes);
+app.use('/api/Purchases', purchaseRoutes);
 
 const PORT = 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

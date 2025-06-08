@@ -72,7 +72,7 @@ async function handleWeb(entry, browser) {
       if (fs.existsSync(out)) continue
       console.log(`   ⬇️  ${f.name}`)
       const res = await axios.get(f.link, {
-        responseType: 'stream', timeout: 60000, decompress: false,
+        responseType: 'stream', timeout: 90000, decompress: false,
         headers: { Cookie: cookieHeader, 'Accept-Encoding': 'identity' }
       })
       const ws = fs.createWriteStream(out)
