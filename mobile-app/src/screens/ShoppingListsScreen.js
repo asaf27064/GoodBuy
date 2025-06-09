@@ -54,7 +54,7 @@ export function ShoppingListStack() {
       })}
     >
       <Stack.Screen
-        name="MyShoppingLists"
+        name="My Shopping Lists"
         component={ShoppingListScreen}
         options={{ headerShown: true }}
       />
