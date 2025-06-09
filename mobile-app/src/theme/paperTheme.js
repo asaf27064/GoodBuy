@@ -6,13 +6,18 @@ export default {
   roundness: 20,
   colors: {
     ...DefaultTheme.colors,
-    primary: COLORS.goodBuyGreen,
-    accent: COLORS.goodBuyGreen,
-    background: COLORS.goodBuyGrayLight,
-    surface: '#fff',
-    text: '#000',
-    placeholder: COLORS.goodBuyGray,
-    disabled: COLORS.goodBuyGrayLight,
-    notification: '#f50057',
+
+    primary:   COLORS.goodBuyGreen,
+    accent:    COLORS.goodBuyGreen,
+    background:COLORS.goodBuyGrayLight,
+    surface:   '#ffffff',
+    text:      '#000000',
+
+    onPrimary:        '#ffffff',
+    onSurface:        '#000000',  
+    onSurfaceDisabled:'#888888',
+    placeholder:      COLORS.goodBuyGray,
+    disabled:         COLORS.goodBuyGrayLight,
+    notification:     '#f50057',
   },
 }

@@ -17,7 +17,6 @@ import ProductListItem from '../components/EditListScreenItem';
 import debounce from 'lodash/debounce';
 import { API_BASE } from '../config';
 
-// Configure axios to use the API base URL
 axios.defaults.baseURL = API_BASE;
 
 const { height } = Dimensions.get('window');
@@ -28,16 +27,14 @@ export default function EditListScreen({ route }) {
   const insets = useSafeAreaInsets();
   const styles = makeStyles(theme, insets);
 
-  const currList = route.params.list.listObj;
-  const [products, setProducts] = useState(currList.products);
-  const initialProducts = useRef(JSON.parse(JSON.stringify(currList.products))); // track initial list snapshot
+  const { listObj } = route.params;
+  const [products, setProducts] = useState(listObj.products);
+  const initialProducts = useRef(JSON.parse(JSON.stringify(listObj.products)));
   const [searchBarInput, setSearchBarInput] = useState('');
   const [searchMatches, setSearchMatches] = useState([]);
 
-  // Fix bug of displaying the wrong numbers upon deletion.
-  const removeProduct = (productToRemove) => {
-    const newProducts = products.filter(e => e !== productToRemove);
-    setProducts(newProducts);
+  const removeProduct = productToRemove => {
+    setProducts(products.filter(p => p !== productToRemove));
   };
 
   const renderItem = ({ item }) => (
@@ -46,81 +43,69 @@ export default function EditListScreen({ route }) {
     </View>
   );
 
-  // Compare old vs new lists to build an edit log
   const compareLists = (oldList, newList) => {
-    const editedBy = 'Me'; // Replace with actual user
+    const editedBy = 'Me';
     let newEdits = [];
 
-    console.log('in');
-    console.log(oldList);
-    console.log(newList);
-
-    // Find removed or updated items
-    oldList.forEach(oldItem => {
-      const newItem = newList.find(n => n.product._id === oldItem.product._id);
-      if (!newItem) {
-        newEdits.push({ product: oldItem.product, changedBy: editedBy, action: 'removed', timeStamp: new Date() });
-      } else if (oldItem.numUnits !== newItem.numUnits) {
+    oldList.forEach(o => {
+      const match = newList.find(n => n.product._id === o.product._id);
+      if (!match) {
+        newEdits.push({ product: o.product, changedBy: editedBy, action: 'removed', timeStamp: new Date() });
+      } else if (match.numUnits !== o.numUnits) {
         newEdits.push({
-          product: oldItem.product,
+          product: o.product,
           changedBy: editedBy,
           action: 'updated',
           timeStamp: new Date(),
-          diffrence: newItem.numUnits - oldItem.numUnits
+          diffrence: match.numUnits - o.numUnits
         });
       }
     });
 
-    // Find added items
-    newList.forEach(newItem => {
-      const oldItem = oldList.find(o => o.product._id === newItem.product._id);
-      if (!oldItem) {
-        newEdits.push({ product: newItem.product, changedBy: editedBy, action: 'added', timeStamp: new Date() });
+    newList.forEach(n => {
+      if (!oldList.find(o => o.product._id === n.product._id)) {
+        newEdits.push({ product: n.product, changedBy: editedBy, action: 'added', timeStamp: new Date() });
       }
     });
 
     return newEdits;
   };
 
-  // Debounced fetch of product search results
-  const fetchProducts = debounce(async (productName) => {
-    if (productName.trim() === '') {
+  const fetchProducts = debounce(async name => {
+    if (!name.trim()) {
       setSearchMatches([]);
       return;
     }
     try {
-      const response = await axios.get(`/api/Products/search/${productName}`);
-      setSearchMatches(response.data.results);
+      const { data } = await axios.get(`/api/Products/search/${name}`);
+      setSearchMatches(data.results);
     } catch (err) {
       console.error('Error getting products:', err);
     }
   }, WAIT_TIME);
 
-  const handleInputChange = (productName) => {
-    setSearchBarInput(productName);
-    fetchProducts(productName);
+  const handleInputChange = name => {
+    setSearchBarInput(name);
+    fetchProducts(name);
   };
 
-  const addNewProduct = async (newProduct) => {
-    console.log(newProduct);
+  const addNewProduct = newProduct => {
     setProducts([...products, { product: newProduct, numUnits: 1 }]);
     setSearchBarInput('');
     setSearchMatches([]);
   };
 
-  // Save changes back to server
   const saveProductsChanges = async () => {
-    currList.products = products;
-    const newEditLog = compareLists(initialProducts.current, products);
-    currList.editLog = [...currList.editLog, ...newEditLog];
-    console.log(currList);
-
-    const data = { list: currList, changes: newEditLog };
-    console.log(data);
+    const updatedList = { ...listObj, products };
+    const newEdits = compareLists(initialProducts.current, products);
+    updatedList.editLog = [...(listObj.editLog || []), ...newEdits];
 
     try {
-      await axios.put(`/api/ShoppingLists/${currList._id}`, data);
-      console.log('changes saved');
+      await axios.put(`/api/ShoppingLists/${listObj._id}`, {
+        list: updatedList,
+        changes: newEdits
+      });
+      console.log('Changes saved');
       initialProducts.current = JSON.parse(JSON.stringify(products));
     } catch (err) {
       console.error('Error saving changes:', err);
@@ -138,6 +123,7 @@ export default function EditListScreen({ route }) {
             style={styles.searchInput}
           />
         </View>
+
         {searchMatches.length > 0 && (
           <FlatList
             data={searchMatches}
@@ -157,9 +143,20 @@ export default function EditListScreen({ route }) {
         )}
       </View>
 
-      <FlatList data={products} style={styles.prodList} renderItem={renderItem} />
+      <FlatList
+        data={products}
+        style={styles.prodList}
+        renderItem={renderItem}
+      />
 
-      <View style={[styles.saveChangesBtn, { marginBottom: insets.bottom + 10 }]}>        <TouchableHighlight onPress={saveProductsChanges}>          <Text style={{ color: theme.colors.surface }}>Save Changes</Text>        </TouchableHighlight>      </View>    </SafeAreaView>  );}
+      <View style={[styles.saveChangesBtn, { marginBottom: insets.bottom + 10 }]}>
+        <TouchableHighlight onPress={saveProductsChanges}>
+          <Text style={{ color: theme.colors.surface }}>Save Changes</Text>
+        </TouchableHighlight>
+      </View>
+    </SafeAreaView>
+  );
+}
 
 function makeStyles(theme, insets) {
   return StyleSheet.create({
@@ -175,9 +172,15 @@ function makeStyles(theme, insets) {
     },
     searchInput: { flex: 1, padding: 8, color: theme.colors.onSurface },
     dropList: {
-      position: 'absolute', top: 50, width: '100%', maxHeight: height / 4,
-      backgroundColor: theme.colors.surface, borderWidth: 1,
-      borderColor: theme.colors.outline, zIndex: 1000, borderRadius: theme.roundness
+      position: 'absolute',
+      top: 50,
+      width: '100%',
+      maxHeight: height / 4,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.outline,
+      zIndex: 1000,
+      borderRadius: theme.roundness
     },
     dropListItem: { borderBottomWidth: 1, borderBottomColor: theme.colors.outline },
     dropListRow: { flexDirection: 'row', padding: 10, alignItems: 'center' },

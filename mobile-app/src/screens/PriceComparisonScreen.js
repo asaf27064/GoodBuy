@@ -1,167 +1,112 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import * as Location from 'expo-location';
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
+import * as Location from 'expo-location'
 import {
   View,
   Text,
   Button,
   SafeAreaView,
-  FlatList
-} from 'react-native';
-import { useTheme } from 'react-native-paper';
-import makeGlobalStyles from '../styles/globalStyles';
-import { API_BASE } from '../config';
+  FlatList,
+  StyleSheet
+} from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
+import { API_BASE } from '../config'
 
-axios.defaults.baseURL = API_BASE;
+axios.defaults.baseURL = API_BASE
 
 export default function PriceComparisonScreen({ route }) {
-  const theme = useTheme();
-  const styles = makeGlobalStyles(theme);
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
 
-  const [userLocation, setUserLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [nearestStores, setNearestStores] = useState([]);
+  const [userLocation, setUserLocation] = useState(null)
+  const [errorMsg, setErrorMsg] = useState(null)
+  const [nearestStores, setNearestStores] = useState([])
 
-  const listProducts = route.params.list.listObj.products;
+  const listProducts =
+    route.params?.list?.listObj?.products ?? []
 
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+    ;(async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync()
       if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
+        setErrorMsg('Location permission denied')
+        return
       }
+      let loc = await Location.getCurrentPositionAsync({})
+      setUserLocation(loc)
+    })()
+  }, [])
 
-      let loc = await Location.getCurrentPositionAsync({});
-      setUserLocation(loc);
-      console.log(loc);
-    })();
-  }, []);
-
-  const searchNearestStores = async function() {
+  const searchNearestStores = async () => {
+    if (!userLocation) return
     try {
-      const response = await axios.get(
-        '/api/Stores/store_search',
-        { params: {
-            latitude: userLocation.coords.latitude,
-            longitude: userLocation.coords.longitude
-          }
+      const { data } = await axios.get('/api/Stores/store_search', {
+        params: {
+          latitude: userLocation.coords.latitude,
+          longitude: userLocation.coords.longitude
         }
-      );
-
-      console.log(response.data);
-      setNearestStores(response.data);
+      })
+      setNearestStores(Array.isArray(data) ? data : [])
     } catch (err) {
-      console.error('Error locating stores:', err);
+      console.error('Error locating stores:', err)
     }
-  };
+  }
 
-  const renderItem = ({ item }) => {
-    return (
-      <View>
-        <Text style={{ textAlign: 'right' }}>
-          {item.store.storeName}
-        </Text>
-      </View>
-    );
-  };
+  const renderStore = ({ item }) => (
+    <View style={localStyles.row}>
+      <Text style={{ color: theme.colors.onSurface }}>
+        {item.store.storeName}
+      </Text>
+    </View>
+  )
 
-  const priceComparator = async function() {
-    const storesIds = nearestStores.map(
-      item => item.store._id.$oid
-    );
-    const productIdsAndAmount = listProducts.map(item => ({
-      productId: item.product._id,
-      amount: item.numUnits
-    }));
+  const priceComparator = async () => {
+    const storeIds = nearestStores.map(i => i.store._id.$oid)
+    const productParams = listProducts.map(i => ({
+      productId: i.product._id,
+      amount: i.numUnits
+    }))
 
-    // Demo for price comparison algorithm. Return the store with cheapest list,
-    // two stores with combination of cheapest items, and closest store
-    const possibleServerResponse = [
-      { name: 'store1', distance: 3.14, prices: [7.67, 11.35, 29.55, 112.30, 40.12] },
-      { name: 'store2', distance: 4.55, prices: [5.25, 10.22, 28.90, 101.11, 37.56] }, // Cheapest One
-      { name: 'store3', distance: 2.90, prices: [7.17, 21.35, 19.55, 112.00, 45.45] }, // One item is cheaper than store2
-      { name: 'store4', distance: 2.80, prices: [7.67, 9.35, 29.55, 112.30, 37.12] },   // Two items are cheaper than store2, but the price difference is not as big as store 3.
-      { name: 'store5', distance: 2.00, prices: [7.67, 111.35, 29.55, 112.30, 40.12] }  // whatever
-    ];
-    
     try {
-      const response = await axios.get(
-        '/api/Products/list_price',
-        {
-          params: {
-            stores: JSON.stringify(storesIds),
-            products: JSON.stringify(productIdsAndAmount)
-          }
+      const { data } = await axios.get('/api/Products/list_price', {
+        params: {
+          stores: JSON.stringify(storeIds),
+          products: JSON.stringify(productParams)
         }
-      );
-
-      console.log(response.data);
-
-      /*const result = {cheapestStore: "", cheapestCombination: "", closest: ""}
-      const MAX_VALUE = 10000;
-      let minSumPrice = MAX_VALUE;
-      let minDist = MAX_VALUE;
-      
-      possibleServerResponse.forEach(entry => {
-
-        let currPrice = entry.prices.reduce((partialSum, a) => partialSum + a, 0);
-        let currDist = entry.distance;
-
-        if(currPrice < minSumPrice) {
-          result.cheapestStore = entry.name;
-          minSumPrice = currPrice;
-        }
-
-        if(currDist < minSumPrice) {
-          result.closest = entry.name;
-          minDist = currDist;
-        }
-      });
-
-      const numStores = possibleServerResponse.length;
-      let numProducts = possibleServerResponse[0].prices.length;
-      let cheapestPrices = [MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE]
-      for(let i=0; i < numStores; i++) {
-        for(let j=i+1; j < numStores; j++) {
-          let currentCombPrices = [MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE]
-          for (let k=0; k<numProducts; k++) {
-            currentCombPrices[k] = Math.min(possibleServerResponse[i].prices[k], possibleServerResponse[j].prices[k])
-          }
-          if (currentCombPrices.reduce((partialSum, a) => partialSum + a, 0) < cheapestPrices.reduce((partialSum, a) => partialSum + a, 0)) {
-            cheapestPrices = currentCombPrices;
-            result.cheapestCombination = "Store " + (i+1) + ", " + "Store " + (j+1);
-          }
-        }
-      }
-
-      console.log(result);*/
+      })
+      console.log('Price response:', data)
     } catch (err) {
-      console.error('Error fetching product prices from stores:', err);
+      console.error('Error fetching prices:', err)
     }
-  };
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { flex: 1, backgroundColor: 'white' }]}>
-      <Button
-        title="Calculate Nearest Stores"
-        onPress={searchNearestStores}
-      />
-      <Text>Location:</Text>
-      <Text>
+    <SafeAreaView style={[styles.container, localStyles.container]}>
+      <Button title="Find Nearest Stores" onPress={searchNearestStores} />
+      <Text style={localStyles.label}>Location:</Text>
+      <Text style={localStyles.locationText}>
         {userLocation
-          ? `Latitude: ${userLocation.coords.latitude}, Longitude: ${userLocation.coords.longitude}`
-          : errorMsg || 'Fetching...'}
+          ? `Lat: ${userLocation.coords.latitude.toFixed(4)}, Lng: ${userLocation.coords.longitude.toFixed(4)}`
+          : errorMsg || 'Fetching location...'}
       </Text>
       <FlatList
         data={nearestStores}
-        keyExtractor={(item) => item.store._id.$oid /*This is how findNearestStores handles id*/}
-        renderItem={renderItem}
+        keyExtractor={i => i.store._id.$oid}
+        renderItem={renderStore}
+        ListEmptyComponent={
+          <Text style={localStyles.empty}>No stores yet.</Text>
+        }
       />
-      <Button
-        title="Calculate best price"
-        onPress={priceComparator}
-      />
+      <Button title="Compare Prices" onPress={priceComparator} />
     </SafeAreaView>
-  );
+  )
 }
+
+const localStyles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  row: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#ddd' },
+  label: { marginTop: 12, fontWeight: 'bold' },
+  locationText: { marginBottom: 12 },
+  empty: { textAlign: 'center', marginVertical: 20, color: '#666' }
+})

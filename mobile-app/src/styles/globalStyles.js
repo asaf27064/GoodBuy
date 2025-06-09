@@ -30,4 +30,18 @@ export default theme =>
     text: {
       color: theme.colors.onBackground,
     },
+    // new:
+    closeBtn: {
+      alignSelf: 'flex-end',
+      padding: 8,
+      marginBottom: 8,
+    },
+    confirmBtn: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: theme.roundness,
+      alignItems: 'center',
+      marginTop: 16,
+    },
   })

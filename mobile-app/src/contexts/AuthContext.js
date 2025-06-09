@@ -1,109 +1,114 @@
+// client/contexts/AuthContext.js
 import React, {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback
-} from 'react'
-import * as SecureStore from 'expo-secure-store'
-import axios from 'axios'
-import { API_BASE } from '../config'
+} from 'react';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
+import { API_BASE } from '../config';
 
-axios.defaults.baseURL = API_BASE
+axios.defaults.baseURL = API_BASE;
 
-const AuthContext = createContext(null)
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState(null)
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
 
   // Apply or remove Authorization header for axios
   const applyAuth = useCallback(t => {
-    if (t) axios.defaults.headers.common.Authorization = `Bearer ${t}`
-    else delete axios.defaults.headers.common.Authorization
-  }, [])
+    if (t) axios.defaults.headers.common.Authorization = `Bearer ${t}`;
+    else delete axios.defaults.headers.common.Authorization;
+  }, []);
 
-  // Logout: clear both tokens
+  // Logout: clear both tokens & user
   const logout = useCallback(async () => {
-    await SecureStore.deleteItemAsync('token')
-    await SecureStore.deleteItemAsync('refreshToken')
-    setToken(null)
-    applyAuth(null)
-  }, [applyAuth])
+    await SecureStore.deleteItemAsync('token');
+    await SecureStore.deleteItemAsync('refreshToken');
+    setToken(null);
+    setUser(null);
+    applyAuth(null);
+  }, [applyAuth]);
 
-  // On app start: load token, validate with /auth/me, or logout
+  // On app start: load token, validate with /auth/me, store user
   useEffect(() => {
-    ;(async () => {
-      const t = await SecureStore.getItemAsync('token')
+    (async () => {
+      const t = await SecureStore.getItemAsync('token');
       if (t) {
-        applyAuth(t)
+        applyAuth(t);
         try {
-          await axios.get('/auth/me')    // validate token
-          setToken(t)
+          const { data } = await axios.get('/auth/me');
+          setUser(data.user);
+          setToken(t);
         } catch {
-          await logout()
+          await logout();
         }
       }
-      setLoading(false)
-    })()
-  }, [applyAuth, logout])
+      setLoading(false);
+    })();
+  }, [applyAuth, logout]);
 
-  //  on 401, try refresh then retry original request
+  // On 401: try refresh, else logout
   useEffect(() => {
     const id = axios.interceptors.response.use(
       res => res,
       async error => {
-        const orig = error.config
+        const orig = error.config;
         if (error.response?.status === 401 && !orig._retry) {
-          orig._retry = true
-          const rt = await SecureStore.getItemAsync('refreshToken')
+          orig._retry = true;
+          const rt = await SecureStore.getItemAsync('refreshToken');
           if (rt) {
             try {
-              const { data } = await axios.post('/auth/refresh', { refreshToken: rt })
-              // save new access token
-              await SecureStore.setItemAsync('token', data.accessToken)
-              applyAuth(data.accessToken)
-              orig.headers.Authorization = `Bearer ${data.accessToken}`
-              return axios(orig)
+              const { data } = await axios.post('/auth/refresh', { refreshToken: rt });
+              await SecureStore.setItemAsync('token', data.accessToken);
+              applyAuth(data.accessToken);
+              orig.headers.Authorization = `Bearer ${data.accessToken}`;
+              return axios(orig);
             } catch {
-              await logout()
+              await logout();
             }
           } else {
-            await logout()
+            await logout();
           }
         }
-        return Promise.reject(error)
+        return Promise.reject(error);
       }
-    )
-    return () => axios.interceptors.response.eject(id)
-  }, [applyAuth, logout])
+    );
+    return () => axios.interceptors.response.eject(id);
+  }, [applyAuth, logout]);
 
-  // Login: store both tokens and apply auth header
+  // Login: store tokens & fetch user
   const login = async (username, password) => {
-    const { data } = await axios.post('/auth/login', { username, password })
-    await SecureStore.setItemAsync('token', data.accessToken)
-    await SecureStore.setItemAsync('refreshToken', data.refreshToken)
-    setToken(data.accessToken)
-    applyAuth(data.accessToken)
-  }
+    const { data } = await axios.post('/auth/login', { username, password });
+    await SecureStore.setItemAsync('token', data.accessToken);
+    await SecureStore.setItemAsync('refreshToken', data.refreshToken);
+    applyAuth(data.accessToken);
+    setToken(data.accessToken);
+    const { data: me } = await axios.get('/auth/me');
+    setUser(me.user);
+  };
 
-  // Register: return server message so caller can show it
+  // Register: return server message
   const register = async (email, username, password) => {
     const { data } = await axios.post('/auth/register', {
       email,
       username,
       password
-    })
-    return data
-  }
+    });
+    return data;
+  };
 
   return (
     <AuthContext.Provider
-      value={{ token, loading, login, register, logout }}
+      value={{ token, user, loading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => useContext(AuthContext);

@@ -1,50 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { View, Text, Button, SafeAreaView, FlatList } from 'react-native';
-import globalStyles from '../styles/globalStyles';
-import { API_BASE } from '../config';
+import React, { useEffect, useState } from 'react'
+import {
+  SafeAreaView,
+  FlatList,
+  View,
+  Text,
+  StyleSheet
+} from 'react-native'
+import axios from 'axios'
+import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
 
-// Set the base URL for all axios requests
-axios.defaults.baseURL = API_BASE;
+export default function ShoppingHistoryScreen() {
+  const { user } = useAuth()
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
 
-function ShoppingHistoryScreen({ navigation }) {
-  const currentUserId = '681124a37782b0cfc87cec16'; // "Me"'s user Id. Should be the current user's Id.
-
-  const [userPurchases, setUserPurchases] = useState();
+  const [history, setHistory] = useState([])
 
   useEffect(() => {
-    const fetchUserPurchases = async function(userId) {
-      try {
-        const response = await axios.get(`/api/Purchases/${userId}`);
-        setUserPurchases(response.data);
-      } catch (err) {
-        console.error('Error finding purchase history:', err);
-      }
-    };
+    if (!user?.id) return
 
-    fetchUserPurchases(currentUserId);
-  }, []);
+    axios
+      .get(`/api/Purchases/${user.id}`)
+      .then(({ data }) => setHistory(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Error fetching purchase history:', err)
+        setHistory([])
+      })
+  }, [user])
 
-  console.log(userPurchases);
-
-  const renderItem = ({ item }) => {
-    return (
-      <View style={{ backgroundColor: 'white', padding: 20, flex: 1 }}>
-        <Text>{item.listId}</Text>
-      </View>
-    );
-  };
+  const renderItem = ({ item }) => (
+    <View style={localStyles.row}>
+      <Text style={{ color: theme.colors.onSurface }}>
+        {new Date(item.timeStamp).toLocaleString()}
+      </Text>
+      <Text style={{ color: theme.colors.onSurface }}>
+        {item.products?.length ?? 0} items
+      </Text>
+    </View>
+  )
 
   return (
-    <SafeAreaView style={globalStyles.container}>
-      <Text>History</Text>
+    <SafeAreaView style={styles.container}>
       <FlatList
-        data={userPurchases}
+        data={history}
+        keyExtractor={r => r._id}
         renderItem={renderItem}
-        style={{ flex: 1 }}
+        ListEmptyComponent={
+          <Text style={localStyles.emptyText}>
+            No purchase history yet.
+          </Text>
+        }
       />
     </SafeAreaView>
-  );
+  )
 }
 
-export default ShoppingHistoryScreen;
+const localStyles = StyleSheet.create({
+  row: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc'
+  },
+  emptyText: {
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 20
+  }
+})

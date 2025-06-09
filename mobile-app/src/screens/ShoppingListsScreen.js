@@ -1,42 +1,24 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  TouchableHighlight,
-  SafeAreaView,
-  Text
-} from 'react-native';
-import { useTheme } from 'react-native-paper';
-import makeGlobalStyles from '../styles/globalStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ShoppingList from '../components/ShoppingListScreenItem';
-import EditListScreen from './EditListScreen';
-import CheckListScreen from './CheckListScreen';
-import EditHistoryScreen from './EditHistoryScreen';
-import RecommendationScreen from './RecommendationsScreen';
-import PriceComparisonScreen from './PriceComparisonScreen';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AddListModal from '../components/AddListModal';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { NavigationContainer } from '@react-navigation/native';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
-import { useAuth } from '../contexts/AuthContext';
-import { API_BASE } from '../config';
+import React, { useState } from 'react'
+import axios from 'axios'
+import { View, FlatList, SafeAreaView, TouchableHighlight } from 'react-native'
+import { useTheme } from 'react-native-paper'
+import makeGlobalStyles from '../styles/globalStyles'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import ShoppingListScreenItem from '../components/ShoppingListScreenItem'
+import AddListModal from '../components/AddListModal'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import CheckListScreen from './CheckListScreen'
+import EditListScreen from './EditListScreen'
+import EditHistoryScreen from './EditHistoryScreen'
+import RecommendationScreen from './RecommendationsScreen'
+import PriceComparisonScreen from './PriceComparisonScreen'
 
-// Configure axios
-axios.defaults.baseURL = API_BASE;
-MaterialCommunityIcons.loadFont();
+MaterialCommunityIcons.loadFont()
+const Stack = createNativeStackNavigator()
 
-const Stack = createNativeStackNavigator();
-const Drawer = createDrawerNavigator();
-
-// Stack navigator for shopping lists and detail screens
-export const ShoppingListStack = () => {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-
+export function ShoppingListStack() {
+  const theme = useTheme()
   return (
     <Stack.Navigator
       screenOptions={({ navigation }) => ({
@@ -52,160 +34,116 @@ export const ShoppingListStack = () => {
             onPress={() => navigation.openDrawer()}
             iconStyle={{ marginRight: 0 }}
             style={{ paddingHorizontal: 16 }}
-            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           />
         )
       })}
     >
-      <Stack.Screen
-        name="MyShoppingLists"
-        component={ShoppingListScreen}
-        options={{ title: 'My Shopping Lists', headerShown: false }}
-      />
+      <Stack.Screen name="MyShoppingLists" component={ShoppingListScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="CheckItems"
         component={CheckListScreen}
-        options={({ route }) => ({
-          title: `${route.params.list.listObj.title}: Check Items`
-        })}
+        options={({ route }) => ({ title: `${route.params.listObj.title}: Check Items` })}
       />
       <Stack.Screen
         name="EditItems"
         component={EditListScreen}
-        options={({ route }) => ({
-          title: `${route.params.list.listObj.title}: Edit List`
-        })}
+        options={({ route }) => ({ title: `${route.params.listObj.title}: Edit List` })}
       />
       <Stack.Screen
         name="EditHistory"
         component={EditHistoryScreen}
-        options={({ route }) => ({
-          title: `${route.params.list.listObj.title}: Edit History`
-        })}
+        options={({ route }) => ({ title: `${route.params.listObj.title}: Edit History` })}
       />
       <Stack.Screen
         name="Recommend"
         component={RecommendationScreen}
-        options={({ route }) => ({
-          title: `${route.params.list.listObj.title}: Suggestions`
-        })}
+        options={({ route }) => ({ title: `${route.params.listObj.title}: Suggestions` })}
       />
       <Stack.Screen
         name="Compare"
         component={PriceComparisonScreen}
-        options={({ route }) => ({
-          title: `${route.params.list.listObj.title}: Price Comparison`
-        })}
+        options={({ route }) => ({ title: `${route.params.listObj.title}: Price Comparison` })}
       />
     </Stack.Navigator>
-  );
-};
-
-// Main drawer with logout
-function AppDrawer() {
-  const { logout } = useAuth();
-  return (
-    <Drawer.Navigator
-      drawerPosition="right"
-      screenOptions={{ headerShown: false }}
-      drawerContent={props => (
-        <DrawerContentScrollView {...props}>
-          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
-        </DrawerContentScrollView>
-      )}
-    >
-      <Drawer.Screen name="Home" component={ShoppingListStack} />
-    </Drawer.Navigator>
-  );
+  )
 }
 
-// Main shopping lists screen
-export default function ShoppingListScreen({ navigation }) {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const styles = makeGlobalStyles(theme);
-  const localStyles = makeLocalStyles(theme, insets);
+function ShoppingListScreen({ navigation }) {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
+  const insets = useSafeAreaInsets()
 
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [shoppingLists, setShoppingLists] = useState([]);
+  const [isModalVisible, setModalVisible] = useState(false)
+  const [shoppingLists, setShoppingLists] = useState([])
 
-  const addList = () => setModalVisible(true);
-  const handleCloseModal = () => setModalVisible(false);
+  const addList = () => setModalVisible(true)
+  const handleCloseModal = () => setModalVisible(false)
 
-  const createNewList = async (title, members, important) => {
+  const createNewList = async (title, memberIds, important) => {
     try {
-      const { data } = await axios.post(
-        '/api/ShoppingLists',
-        { title, members: [members], importantList: important }
-      );
-      setShoppingLists(prev => [...prev, data]);
-      handleCloseModal();
+      const { data } = await axios.post('/api/ShoppingLists', {
+        title,
+        members: memberIds,
+        importantList: important
+      })
+      setShoppingLists(prev => [...prev, data])
+      handleCloseModal()
     } catch (err) {
-      console.error('Error creating list:', err);
+      console.error('Error creating list:', err)
     }
-  };
+  }
 
   const renderItem = ({ item }) => (
     <View style={localStyles.shopList}>
-      <ShoppingList
-        listObj={item}
-        listId={item._id}
-        members={item.members}
-        title={item.title}
-        products={item.products}
-        editLog={item.editLog}
-        navigation={navigation}
-      />
+      <ShoppingListScreenItem listObj={item} navigation={navigation} />
     </View>
-  );
+  )
 
   return (
     <SafeAreaView style={styles.container}>
-      <AddListModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        createList={createNewList}
-      />
+      <AddListModal isVisible={isModalVisible} onClose={handleCloseModal} createList={createNewList} />
+
       <FlatList
         data={shoppingLists}
         renderItem={renderItem}
+        keyExtractor={item => item._id}
         ListFooterComponent={<View />}
-        ListFooterComponentStyle={{ flex: 1, height: 120, marginTop: 10, justifyContent: 'flex-end' }}
+        ListFooterComponentStyle={{ height: 120, justifyContent: 'flex-end' }}
       />
+
       <TouchableHighlight
         onPress={addList}
-        style={localStyles.addListBtn}
+        style={[
+          localStyles.addListBtn,
+          {
+            bottom: insets.bottom + 20,
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary
+          }
+        ]}
+        underlayColor={theme.colors.surface}
       >
-        <MaterialCommunityIcons
-          name="plus"
-          color={theme.colors.onPrimary}
-          size={28}
-        />
+        <MaterialCommunityIcons name="plus" color={theme.colors.onPrimary} size={28} />
       </TouchableHighlight>
     </SafeAreaView>
-  );
+  )
 }
 
-// Local styles factory using theme and insets
-function makeLocalStyles(theme, insets) {
-  return StyleSheet.create({
-    shopList: {
-      flex: 1,
-      borderRadius: 10,
-      marginTop: 10,
-      marginHorizontal: 10,
-      backgroundColor: 'pink'
-    },
-    addListBtn: {
-      position: 'absolute',
-      right: 20,
-      bottom: insets.bottom + 60 + 10,
-      alignItems: 'center',
-      padding: 20,
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
-      borderWidth: 2,
-      borderRadius: 20
-    }
-  });
+export default ShoppingListScreen
+
+const localStyles = {
+  shopList: {
+    flex: 1,
+    borderRadius: 10,
+    margin: 10,
+    backgroundColor: 'pink'
+  },
+  addListBtn: {
+    position: 'absolute',
+    right: 20,
+    padding: 16,
+    borderWidth: 2,
+    borderRadius: 20,
+    alignItems: 'center'
+  }
 }

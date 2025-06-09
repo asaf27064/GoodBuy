@@ -11,7 +11,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 
-// Screens
+// Screens & stacks
 import { ShoppingListStack } from './screens/ShoppingListsScreen';
 import ShoppingHistoryScreen from './screens/ShoppingHistoryScreen';
 
@@ -27,12 +27,10 @@ import paperTheme from './theme/paperTheme';
 // Config
 import { API_BASE } from './config';
 
-// Initialize services
 MaterialCommunityIcons.loadFont();
 axios.defaults.baseURL = API_BASE;
 const socket = io(API_BASE);
 
-// Navigator instances
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -46,7 +44,7 @@ function AnimatedIcon({ name, color, size, focused }) {
   );
 }
 
-// Bottom tabs: ShopList and History
+// Bottom tabs
 function MainTabs() {
   const { colors } = useTheme();
   return (
@@ -72,13 +70,13 @@ function MainTabs() {
           backgroundColor: colors.surface,
           borderRadius: 20,
           height: 60,
-          borderTopWidth: 0,
+          borderTopWidth: 0
         },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarIcon: ({ color, size, focused }) => {
           const icons = {
             ShopList: 'script-text',
-            History: 'clipboard-text-clock',
+            History: 'clipboard-text-clock'
           };
           return <AnimatedIcon name={icons[route.name]} color={color} size={size} focused={focused} />;
         }
@@ -94,11 +92,15 @@ function MainTabs() {
 function AppDrawer() {
   const { logout } = useAuth();
   return (
-    <Drawer.Navigator screenOptions={{ headerShown: false }} drawerPosition="right" drawerContent={props => (
-      <DrawerContentScrollView {...props}>
-        <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
-      </DrawerContentScrollView>
-    )}>
+    <Drawer.Navigator
+      screenOptions={{ headerShown: false }}
+      drawerPosition="right"
+      drawerContent={props => (
+        <DrawerContentScrollView {...props}>
+          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
+        </DrawerContentScrollView>
+      )}
+    >
       <Drawer.Screen name="Home" component={MainTabs} />
     </Drawer.Navigator>
   );
@@ -114,14 +116,13 @@ function AuthStack() {
   );
 }
 
-// Root determines auth vs app
+// Root
 function RootNavigator() {
   const { token, loading } = useAuth();
   if (loading) return null;
   return token ? <AppDrawer /> : <AuthStack />;
 }
 
-// App entry
 export default function App() {
   return (
     <PaperProvider theme={paperTheme}>
@@ -135,5 +136,5 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  menuButton: { marginRight: 16 },
+  menuButton: { marginRight: 16 }
 });
