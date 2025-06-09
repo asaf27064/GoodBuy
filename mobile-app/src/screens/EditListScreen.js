@@ -57,8 +57,11 @@ export default function EditListScreen({ route, navigation }) {
     const edits = diffLog(initialRef.current, products);
     const updated = { ...listObj, products, editLog: [...(listObj.editLog || []), ...edits] };
     try {
-      await axios.put(`/api/ShoppingLists/${listObj._id}`, { list: updated, changes: edits });
-      initialRef.current = [...products];
+      const { data: refreshedList } = await axios.get(`/api/ShoppingLists/${listObj._id}`);
+      initialRef.current = [...refreshedList.products];
+      setProducts(refreshedList.products);
+      // Update navigation param as well:
+      navigation.setParams({ listObj: refreshedList });
     } catch (e) {
       console.error(e);
     }

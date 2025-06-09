@@ -41,8 +41,8 @@ export default function AddItemScreen({ route, navigation }) {
       title={item.itemName}
       left={props => <List.Icon {...props} icon="cube-outline" />}
       onPress={() => {
-        // navigate back to EditItems, re-passing listObj + the new item
-        navigation.navigate('EditItems', {
+        // Replace instead of push so the back button doesn't go back to the search
+        navigation.replace('EditItems', {
           listObj,
           addedItem: item
         });
