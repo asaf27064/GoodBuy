@@ -183,7 +183,7 @@ export default function ShoppingListScreen({ navigation }) {
         style={[
           localStyles.addListBtn,
           {
-            bottom: insets.bottom + 20,
+            bottom: insets.bottom + 80, // ensures it's always above nav bar!
             backgroundColor: theme.colors.primary,
             borderColor: theme.colors.primary
           }
@@ -213,6 +213,10 @@ const localStyles = {
     padding: 16,
     borderWidth: 2,
     borderRadius: 20,
-    alignItems: 'center'
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+    elevation: 12,
+    // Do not set bottom here! It is set dynamically above.
   }
 };

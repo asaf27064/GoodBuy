@@ -81,7 +81,7 @@ export default function EditListScreen({ route, navigation }) {
           backgroundColor: theme.colors.surface,
           borderTopWidth: 1,
           borderColor: theme.colors.outline,
-          paddingBottom: insets.bottom + 16,
+          paddingBottom: insets.bottom + 80, // ensures button is above nav bar!
           zIndex: 1000,    // ensure above tabs
           elevation: 10
         }}
