@@ -1,12 +1,13 @@
 // mobile-app/src/screens/ShoppingListsScreen.js
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   View,
   FlatList,
   SafeAreaView,
-  TouchableHighlight
+  TouchableHighlight,
+  ActivityIndicator
 } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import makeGlobalStyles from '../styles/globalStyles';
@@ -14,17 +15,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Components & Screens
+import ShoppingList from '../components/ShoppingListScreenItem';
+import AddListModal from '../components/AddListModal';
+
+// Navigation
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import CheckListScreen from './CheckListScreen';
 import EditListScreen from './EditListScreen';
 import EditHistoryScreen from './EditHistoryScreen';
 import RecommendationScreen from './RecommendationsScreen';
 import PriceComparisonScreen from './PriceComparisonScreen';
 import AddItemScreen from './AddItemScreen';
-import ShoppingList from '../components/ShoppingListScreenItem';
-import AddListModal from '../components/AddListModal';
 
-// Navigation
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 MaterialCommunityIcons.loadFont();
 
 const Stack = createNativeStackNavigator();
@@ -51,14 +53,11 @@ export function ShoppingListStack() {
         )
       })}
     >
-      {/* Main list view */}
       <Stack.Screen
         name="MyShoppingLists"
         component={ShoppingListScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: true }}
       />
-
-      {/* Navigate into these with navigation.navigate('ScreenName', { listObj }) */}
       <Stack.Screen
         name="CheckItems"
         component={CheckListScreen}
@@ -107,8 +106,26 @@ export default function ShoppingListScreen({ navigation }) {
   const theme = useTheme();
   const styles = makeGlobalStyles(theme);
   const insets = useSafeAreaInsets();
+
   const [isModalVisible, setModalVisible] = useState(false);
   const [shoppingLists, setShoppingLists] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // fetch all shopping lists on mount
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
+      try {
+        const { data } = await axios.get('/api/ShoppingLists');
+        if (isActive) setShoppingLists(data);
+      } catch (err) {
+        console.error('Error fetching lists:', err);
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    })();
+    return () => { isActive = false; };
+  }, []);
 
   const addList = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);
@@ -120,6 +137,7 @@ export default function ShoppingListScreen({ navigation }) {
         members: memberIds,
         importantList: important
       });
+      // append new list to state
       setShoppingLists(prev => [...prev, data]);
       handleCloseModal();
     } catch (err) {
@@ -129,10 +147,17 @@ export default function ShoppingListScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <View style={localStyles.shopList}>
-      {/* pass the raw listObj */}
       <ShoppingList listObj={item} navigation={navigation} />
     </View>
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

@@ -1,5 +1,4 @@
 // mobile-app/src/screens/AddItemScreen.js
-
 import React, { useState, useCallback } from 'react';
 import { View, FlatList } from 'react-native';
 import { Searchbar, List, useTheme } from 'react-native-paper';
@@ -9,12 +8,13 @@ import { API_BASE } from '../config';
 
 axios.defaults.baseURL = API_BASE;
 
-export default function AddItemScreen({ navigation }) {
+export default function AddItemScreen({ route, navigation }) {
   const theme = useTheme();
+  const { listObj } = route.params;       // receive original listObj
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
 
-  // Debounced server search
+  // debounced search
   const doSearch = useCallback(
     debounce(async term => {
       if (!term.trim()) {
@@ -25,7 +25,7 @@ export default function AddItemScreen({ navigation }) {
         const { data } = await axios.get(`/api/Products/search/${term}`);
         setResults(data.results);
       } catch (e) {
-        console.error('Search error:', e);
+        console.error(e);
       }
     }, 300),
     []
@@ -38,15 +38,13 @@ export default function AddItemScreen({ navigation }) {
 
   const renderItem = ({ item, index }) => (
     <List.Item
-      key={`${item.itemName}_${index}`}
       title={item.itemName}
       left={props => <List.Icon {...props} icon="cube-outline" />}
       onPress={() => {
-        // Merge selected item back into EditItems
-        navigation.navigate({
-          name: 'EditItems',
-          params: { addedItem: item },
-          merge: true
+        // navigate back to EditItems, re-passing listObj + the new item
+        navigation.navigate('EditItems', {
+          listObj,
+          addedItem: item
         });
       }}
     />

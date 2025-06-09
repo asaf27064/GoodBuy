@@ -1,11 +1,5 @@
 // mobile-app/src/screens/EditListScreen.js
-
-import React, {
-  useState,
-  useRef,
-  useLayoutEffect,
-  useEffect
-} from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import axios from 'axios';
 import {
   SafeAreaView,
@@ -22,37 +16,47 @@ import { API_BASE } from '../config';
 axios.defaults.baseURL = API_BASE;
 
 export default function EditListScreen({ route, navigation }) {
-  const { listObj } = route.params;        // now defined
-  const [products, setProducts] = useState(listObj.products || []);
-  const initialRef = useRef([...products]);
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  // Add-item button in header
+  // grab the listObj passed from ShoppingListsScreenItem
+  const { listObj } = route.params;
+
+  const [products, setProducts] = useState(listObj.products || []);
+  const initialRef = useRef([...products]);
+
+  // add-item button in the header — now passes listObj explicitly
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <IconButton
           icon="plus"
           color={theme.colors.onPrimary}
-          onPress={() => navigation.navigate('AddItem')}
+          onPress={() =>
+            navigation.navigate('AddItem', { listObj })
+          }
         />
       )
     });
-  }, [navigation, theme.colors.onPrimary]);
+  }, [navigation, theme.colors.onPrimary, listObj]);
 
-  // When AddItemScreen returns an addedItem
+  // pick up the addedItem when AddItemScreen navigates back
   useEffect(() => {
     if (route.params?.addedItem) {
-      setProducts(p => [...p, { product: route.params.addedItem, numUnits: 1 }]);
+      setProducts(ps => [
+        ...ps,
+        { product: route.params.addedItem, numUnits: 1 }
+      ]);
+      // clear it so it won't re-run
       navigation.setParams({ addedItem: undefined });
     }
-  }, [route.params?.addedItem]);
+  }, [route.params?.addedItem, navigation]);
 
-  // Build edit-log diff
+  // diff logic unchanged...
   const diffLog = (oldList, newList) => {
     const me = 'Me';
     const edits = [];
+
     oldList.forEach(o => {
       const m = newList.find(n => n.product.itemName === o.product.itemName);
       if (!m) {
@@ -67,15 +71,16 @@ export default function EditListScreen({ route, navigation }) {
         });
       }
     });
+
     newList.forEach(n => {
       if (!oldList.find(o => o.product.itemName === n.product.itemName)) {
         edits.push({ product: n.product, action: 'added', changedBy: me, timeStamp: new Date() });
       }
     });
+
     return edits;
   };
 
-  // Save back to server
   const saveChanges = async () => {
     const edits = diffLog(initialRef.current, products);
     const updated = {
@@ -107,13 +112,16 @@ export default function EditListScreen({ route, navigation }) {
         )}
         contentContainerStyle={{ padding: 8 }}
       />
-      <View style={{
-        padding: 16,
-        backgroundColor: theme.colors.surface,
-        borderTopWidth: 1,
-        borderColor: theme.colors.outline,
-        paddingBottom: insets.bottom + 16
-      }}>
+
+      <View
+        style={{
+          padding: 16,
+          backgroundColor: theme.colors.surface,
+          borderTopWidth: 1,
+          borderColor: theme.colors.outline,
+          paddingBottom: insets.bottom + 16
+        }}
+      >
         <TouchableHighlight
           onPress={saveChanges}
           style={{
@@ -124,10 +132,7 @@ export default function EditListScreen({ route, navigation }) {
           }}
           underlayColor={theme.colors.primary}
         >
-          <Text style={{
-            color: theme.colors.onPrimary,
-            fontWeight: '600'
-          }}>
+          <Text style={{ color: theme.colors.onPrimary, fontWeight: '600' }}>
             Save Changes
           </Text>
         </TouchableHighlight>
