@@ -34,5 +34,7 @@ PriceItemSchema.index({ storeRef: 1, itemCode: 1 });
 PriceItemSchema.index({ priceFile: 1, itemCode: 1 });
 PriceItemSchema.index({ itemCode: 1, chainId: 1 });
 PriceItemSchema.index({ itemPrice: 1 });
+PriceItemSchema.index({ itemName: 1 });
+
 
 module.exports = mongoose.model('PriceItem', PriceItemSchema);

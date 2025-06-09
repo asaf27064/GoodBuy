@@ -1,71 +1,73 @@
-// components/ShoppingListScreenItem.js
-import React from 'react'
-import { View, Text, TouchableHighlight, StyleSheet } from 'react-native'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import globalStyles from '../styles/globalStyles'
+// mobile-app/src/components/ShoppingListScreenItem.js
 
-export default function ShoppingListScreenItem({ listObj, navigation }) {
-  const go = screen => () =>
-    navigation.navigate(screen, { listObj })
+import React from 'react';
+import { View, Text, TouchableHighlight, StyleSheet } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import globalStyles from '../styles/globalStyles';
+
+const ShoppingListScreenItem = ({ listObj, navigation }) => {
+  const { title, members } = listObj;
+
+  // Navigate passing listObj directly
+  const goToEditList = () =>
+    navigation.navigate('EditItems', { listObj });
+  const goToCheckList = () =>
+    navigation.navigate('CheckItems', { listObj });
+  const goToEditHistory = () =>
+    navigation.navigate('EditHistory', { listObj });
+  const goToSuggestions = () =>
+    navigation.navigate('Recommend', { listObj });
+  const goToPriceComparison = () =>
+    navigation.navigate('Compare', { listObj });
 
   return (
     <View style={styles.container}>
       <View style={styles.textContainer}>
-        <Text style={globalStyles.headerText}>{listObj.title}</Text>
-        <Text>
-          members:{' '}
-          {listObj.members.map(u => u.username).join(', ')}
-        </Text>
+        <Text style={globalStyles.headerText}>{title}</Text>
+        <Text>Members: {members.map(u => u.username).join(', ')}</Text>
       </View>
       <View style={styles.buttonsContainer}>
-        <TouchableHighlight onPress={go('EditItems')} style={styles.btn}>
-          <MaterialCommunityIcons name="file-edit-outline" size={30} />
+        <TouchableHighlight onPress={goToEditList} style={styles.btn}>
+          <MaterialCommunityIcons name="file-edit-outline" size={24} />
         </TouchableHighlight>
-        <View style={styles.separator} />
-        <TouchableHighlight onPress={go('Recommend')} style={styles.btn}>
-          <MaterialCommunityIcons name="thumb-up-outline" size={30} />
+        <TouchableHighlight onPress={goToSuggestions} style={styles.btn}>
+          <MaterialCommunityIcons name="thumb-up-outline" size={24} />
         </TouchableHighlight>
-        <View style={styles.separator} />
-        <TouchableHighlight onPress={go('Compare')} style={styles.btn}>
-          <MaterialCommunityIcons name="scale-unbalanced" size={30} />
+        <TouchableHighlight onPress={goToPriceComparison} style={styles.btn}>
+          <MaterialCommunityIcons name="scale-unbalanced" size={24} />
         </TouchableHighlight>
-        <View style={styles.separator} />
-        <TouchableHighlight onPress={go('CheckItems')} style={styles.btn}>
-          <MaterialCommunityIcons name="check-circle-outline" size={30} />
+        <TouchableHighlight onPress={goToCheckList} style={styles.btn}>
+          <MaterialCommunityIcons name="check-circle-outline" size={24} />
         </TouchableHighlight>
-        <View style={styles.separator} />
-        <TouchableHighlight onPress={go('EditHistory')} style={styles.btn}>
-          <MaterialCommunityIcons name="history" size={30} />
+        <TouchableHighlight onPress={goToEditHistory} style={styles.btn}>
+          <MaterialCommunityIcons name="history" size={24} />
         </TouchableHighlight>
       </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    borderRadius: 10,
-    backgroundColor: 'beige'
+    borderRadius: 8,
+    margin: 8,
+    backgroundColor: '#f9f9f9',
+    overflow: 'hidden'
   },
   textContainer: {
-    flex: 1,
-    margin: 10
+    padding: 12
   },
   buttonsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'red',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10
+    borderTopWidth: 1,
+    borderColor: '#ddd'
   },
   btn: {
     flex: 1,
+    padding: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20
-  },
-  separator: {
-    width: 1,
-    backgroundColor: 'black'
+    justifyContent: 'center'
   }
-})
+});
+
+export default ShoppingListScreenItem;
