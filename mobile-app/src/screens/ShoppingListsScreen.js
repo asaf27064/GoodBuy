@@ -20,14 +20,19 @@ import PriceComparisonScreen from './PriceComparisonScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddListModal from '../components/AddListModal';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { NavigationContainer } from '@react-navigation/native';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { useAuth } from '../contexts/AuthContext';
 import { API_BASE } from '../config';
 
-// Set base URL for axios
+// Configure axios
 axios.defaults.baseURL = API_BASE;
-
 MaterialCommunityIcons.loadFont();
-const Stack = createNativeStackNavigator();
 
+const Stack = createNativeStackNavigator();
+const Drawer = createDrawerNavigator();
+
+// Stack navigator for shopping lists and detail screens
 export const ShoppingListStack = () => {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -36,21 +41,20 @@ export const ShoppingListStack = () => {
     <Stack.Navigator
       screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: theme.colors.primary },
-        headerTintColor: theme.colors.onPrimary || '#fff',
+        headerTintColor: theme.colors.onPrimary,
         headerTitleStyle: { fontWeight: 'bold' },
         headerRight: () => (
           <MaterialCommunityIcons.Button
             name="menu"
-            size={28}
-            color={theme.colors.onPrimary || '#fff'}
+            size={24}
+            color={theme.colors.onPrimary}
             backgroundColor={theme.colors.primary}
             onPress={() => navigation.openDrawer()}
             iconStyle={{ marginRight: 0 }}
             style={{ paddingHorizontal: 16 }}
             hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           />
-        ),
-        headerRightContainerStyle: { paddingRight: 0 }
+        )
       })}
     >
       <Stack.Screen
@@ -97,10 +101,30 @@ export const ShoppingListStack = () => {
   );
 };
 
+// Main drawer with logout
+function AppDrawer() {
+  const { logout } = useAuth();
+  return (
+    <Drawer.Navigator
+      drawerPosition="right"
+      screenOptions={{ headerShown: false }}
+      drawerContent={props => (
+        <DrawerContentScrollView {...props}>
+          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
+        </DrawerContentScrollView>
+      )}
+    >
+      <Drawer.Screen name="Home" component={ShoppingListStack} />
+    </Drawer.Navigator>
+  );
+}
+
+// Main shopping lists screen
 export default function ShoppingListScreen({ navigation }) {
   const theme = useTheme();
-  const styles = makeGlobalStyles(theme);
   const insets = useSafeAreaInsets();
+  const styles = makeGlobalStyles(theme);
+  const localStyles = makeLocalStyles(theme, insets);
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [shoppingLists, setShoppingLists] = useState([]);
@@ -146,23 +170,15 @@ export default function ShoppingListScreen({ navigation }) {
         data={shoppingLists}
         renderItem={renderItem}
         ListFooterComponent={<View />}
-        ListFooterComponentStyle={{
-          flex: 1,
-          height: 120,
-          marginTop: 10,
-          justifyContent: 'flex-end'
-        }}
+        ListFooterComponentStyle={{ flex: 1, height: 120, marginTop: 10, justifyContent: 'flex-end' }}
       />
       <TouchableHighlight
         onPress={addList}
-        style={[
-          localStyles.addListBtn,
-          { bottom: insets.bottom + 60 + 10 }
-        ]}
+        style={localStyles.addListBtn}
       >
         <MaterialCommunityIcons
           name="plus"
-          color={theme.colors.onPrimary || '#fff'}
+          color={theme.colors.onPrimary}
           size={28}
         />
       </TouchableHighlight>
@@ -170,23 +186,26 @@ export default function ShoppingListScreen({ navigation }) {
   );
 }
 
-const localStyles = StyleSheet.create({
-  shopList: {
-    flex: 1,
-    borderRadius: 10,
-    marginTop: 10,
-    marginHorizontal: 10,
-    backgroundColor: 'pink'
-  },
-  addListBtn: {
-    backgroundColor: theme => theme.colors.primary,
-    position: 'absolute',
-    right: 0,
-    alignItems: 'center',
-    marginRight: 20,
-    padding: 20,
-    borderColor: theme => theme.colors.primary,
-    borderWidth: 2,
-    borderRadius: 20
-  }
-});
+// Local styles factory using theme and insets
+function makeLocalStyles(theme, insets) {
+  return StyleSheet.create({
+    shopList: {
+      flex: 1,
+      borderRadius: 10,
+      marginTop: 10,
+      marginHorizontal: 10,
+      backgroundColor: 'pink'
+    },
+    addListBtn: {
+      position: 'absolute',
+      right: 20,
+      bottom: insets.bottom + 60 + 10,
+      alignItems: 'center',
+      padding: 20,
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+      borderWidth: 2,
+      borderRadius: 20
+    }
+  });
+}
