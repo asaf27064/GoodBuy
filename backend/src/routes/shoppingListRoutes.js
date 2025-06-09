@@ -1,13 +1,12 @@
-const express = require('express');
-const shoppingListController = require('../controllers/shoppingListController');
-const router = express.Router();
+const express = require('express')
+const auth = require('../middleware/auth')
+const ctrl = require('../controllers/shoppingListController')
+const router = express.Router()
 
-router.get('/', shoppingListController.getAllUserShoppingLists);
+router.use(auth)
+router.get('/',    ctrl.getAllUserShoppingLists)
+router.post('/',   ctrl.createList)
+router.get('/:id', ctrl.getShoppingList)
+router.put('/:id', ctrl.updateListProducts)
 
-router.post('/', shoppingListController.createList);
-
-router.get('/:id', shoppingListController.getShoppingList);
-
-router.put('/:id', shoppingListController.updateListProducts);
-
-module.exports = router;
+module.exports = router

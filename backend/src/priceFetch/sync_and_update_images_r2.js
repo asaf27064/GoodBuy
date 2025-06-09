@@ -9,14 +9,17 @@ const ItemImage = require('../models/ItemImage');
 const PriceItem = require('../models/PriceItem');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const DOWNLOAD_DIR = path.join(__dirname, 'DownloadsMissingPhotos');
-const R2_BUCKET = process.env.R2_BUCKET;
-const R2_REGION = process.env.R2_REGION;
-const R2_ENDPOINT = process.env.R2_ENDPOINT;
-const PUBLIC_DEV_URL = process.env.PUBLIC_DEV_URL;
-const R2_CONCURRENCY = require('os').cpus().length * 2;
-const CHP_CONCURRENCY = require('os').cpus().length * 2;
-const MAX_CHP_TIMEOUT = 90_000;
+const ALLOW_CHP_API     = process.env.CHP_API_ENABLED === 'true';
+const ALLOW_R2_UPLOAD   = process.env.R2_UPLOAD_ENABLED === 'true';
+
+const DOWNLOAD_DIR      = path.join(__dirname, 'DownloadsMissingPhotos');
+const R2_BUCKET         = process.env.R2_BUCKET;
+const R2_REGION         = process.env.R2_REGION;
+const R2_ENDPOINT       = process.env.R2_ENDPOINT;
+const PUBLIC_DEV_URL    = process.env.PUBLIC_DEV_URL;
+const R2_CONCURRENCY    = require('os').cpus().length * 2;
+const CHP_CONCURRENCY   = require('os').cpus().length * 2;
+const MAX_CHP_TIMEOUT   = 90_000;
 
 const s3 = new S3Client({
   region: R2_REGION,
@@ -51,6 +54,9 @@ async function listAllR2Images(prefix = 'images/') {
 }
 
 async function downloadBigImage(sku) {
+  if (!ALLOW_CHP_API) {
+    throw new Error('CHP API usage is disabled. Set CHP_API_ENABLED=true to enable downloads.');
+  }
   const url = `https://chp.co.il/main_page/compare_results?product_barcode=${sku}`;
   await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
   const res = await axios.get(url, {
@@ -82,6 +88,9 @@ async function downloadBigImage(sku) {
 }
 
 async function uploadToR2(filePath, sku) {
+  if (!ALLOW_R2_UPLOAD) {
+    throw new Error('R2 upload is disabled. Set R2_UPLOAD_ENABLED=true to enable uploads.');
+  }
   const fileContent = fs.readFileSync(filePath);
   const Key = `images/${sku}.png`;
   const uploadParams = {
@@ -93,15 +102,13 @@ async function uploadToR2(filePath, sku) {
   await s3.send(new PutObjectCommand(uploadParams));
   fs.unlinkSync(filePath);
   const imageUrl = `${PUBLIC_DEV_URL}/images/${sku}.png`;
-  return {
-    key: Key,
-    imageUrl
-  };
+  return { key: Key, imageUrl };
 }
 
 async function main() {
   if (!process.env.MONGO_URI) {
-    console.error('✖️ MONGO_URI not set'); process.exit(1);
+    console.error('✖️ MONGO_URI not set');
+    process.exit(1);
   }
 
   await mongoose.connect(process.env.MONGO_URI);
@@ -152,34 +159,25 @@ async function main() {
     await Promise.all(missing.map(sku => chpLimit(async () => {
       const Key = `images/${sku}.png`;
       const imageUrl = `${PUBLIC_DEV_URL}/images/${sku}.png`;
+
       if (r2Images.includes(sku)) {
         await ItemImage.updateOne(
           { itemCode: sku },
           {
-            $set: {
-              status: 'found',
-              s3Key: Key,
-              imageUrl,
-              lastCheckedAt: new Date(),
-              attempts: 0
-            }
+            $set: { status: 'found', s3Key: Key, imageUrl, lastCheckedAt: new Date(), attempts: 0 }
           },
           { upsert: true }
         );
+
       } else {
         try {
           const filePath = await downloadBigImage(sku);
           console.log(`[${now()}] ✅ Downloaded CHP image for SKU ${sku}`);
-          const { key, imageUrl } = await uploadToR2(filePath, sku);
+          const { key, imageUrl: uploadedUrl } = await uploadToR2(filePath, sku);
           await ItemImage.updateOne(
             { itemCode: sku },
             {
-              $set: {
-                status: 'found',
-                s3Key: key,
-                imageUrl,
-                lastCheckedAt: new Date()
-              },
+              $set: { status: 'found', s3Key: key, imageUrl: uploadedUrl, lastCheckedAt: new Date() },
               $inc: { attempts: 1 }
             },
             { upsert: true }

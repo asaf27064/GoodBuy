@@ -1,47 +1,36 @@
-const User = require('../models/userModel');
-
-// Copied directly from item controller, names of functions changed. TODO: implement functions.
-
+const User = require('../Models/userModel')
+const bcrypt = require('bcrypt')
 
 exports.createUser = async (req, res) => {
-    try {
+  const { email, password, username, location } = req.body
+  if (!email || !password) return res.status(400).end()
+  if (await User.findOne({ email })) return res.status(409).end()
+  const passwordHash = await bcrypt.hash(password, 12)
+  const user = await User.create({ email, passwordHash, username, location })
+  res.status(201).json(user)
+}
 
-    // Check if user already exists
-    let user = await User.findOne({ username: req.body.username });
-    if (user) return res.status(409).send('User already exists');
-
-    // Hash the password
-    const salt = await bcrypt.genSalt(10); // Taken from AP2 course, check what everything is later
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
-    // Create new user
-    newUser = new User({
-        username: req.body.username,
-        password: hashedPassword,
-        email: req.body.email
-    });
-        await newUser.save();
-
-    res.status(201).json(newUser);
-    }
-    
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-  
+exports.listUsers = async (req, res) => {
+  const users = await User.find().select('-passwordHash')
+  res.json(users)
+}
 
 exports.getUser = async (req, res) => {
+  const user = await User.findById(req.params.id).select('-passwordHash')
+  if (!user) return res.status(404).end()
+  res.json(user)
+}
 
-    try {
+exports.updateUser = async (req, res) => {
+  const { password, ...rest } = req.body
+  if (password) rest.passwordHash = await bcrypt.hash(password, 12)
+  const user = await User.findByIdAndUpdate(req.params.id, rest, { new: true }).select('-passwordHash')
+  if (!user) return res.status(404).end()
+  res.json(user)
+}
 
-        const user = await User.findOne(req.params.username).select('-password');
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-        res.json(user);
-        
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+exports.deleteUser = async (req, res) => {
+  const user = await User.findByIdAndDelete(req.params.id).select('-passwordHash')
+  if (!user) return res.status(404).end()
+  res.json(user)
+}

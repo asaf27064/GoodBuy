@@ -21,7 +21,7 @@ const PriceItemSchema = new mongoose.Schema({
   unitOfMeasure:     { type: String },
   isWeighted:        { type: Boolean },
   qtyInPackage:      { type: Number },
-  itemPrice:         { type: Number},
+  itemPrice:         { type: Number, index: true },
   unitOfMeasurePrice:{ type: Number },
   allowDiscount:     { type: Boolean },
   itemStatus:        { type: Number },

@@ -14,3 +14,50 @@ backend/src/node_modules/mongodb/
 backend/src/node_modules/mongodb
 backend/src/priceFetch/DownloadsMissingPhotos
 backend/src/.env
+mobile-app/.expo/
+mobile-app/src/.expo/
+.expo/
+node_modules/
+
+# --- Node.js ---
+**/node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# --- Environment Files ---
+**/.env
+**/.env.*
+**/.env*.local
+
+# --- Logs ---
+**/logs/
+*.log
+
+# --- Expo & React Native ---
+**/.expo/
+**/.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# --- Native Build Artifacts ---
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# --- macOS ---
+.DS_Store
+
+# --- TypeScript ---
+*.tsbuildinfo
+
+# --- IDEs ---
+.vscode/
+.idea/
+
