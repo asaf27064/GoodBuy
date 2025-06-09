@@ -41,12 +41,17 @@ export default function AddItemScreen({ route, navigation }) {
       title={item.itemName}
       left={props => <List.Icon {...props} icon="cube-outline" />}
       onPress={() => {
-        // Replace instead of push so the back button doesn't go back to the search
         navigation.replace('EditItems', {
           listObj,
-          addedItem: item
+          addedItem: {
+            itemCode: item.itemCode,
+            name: item.itemName,
+            image: item.imageUrl || '',    // If you have no imageUrl, just use ''
+            numUnits: 1
+          }
         });
       }}
+
     />
   );
 
