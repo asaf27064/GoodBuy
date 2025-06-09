@@ -2,7 +2,7 @@ const mongoose      = require('mongoose');
 const geocodeGoogle = require('./geocode-google');
 const geocodeOSM    = require('./geocode-util');
 const Store         = require('../models/Store');
-const pLimit        = require('p-limit').default;
+const pLimit        = require('p-limit');
 const fs            = require('fs');
 const path          = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });

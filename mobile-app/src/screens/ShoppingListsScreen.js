@@ -6,6 +6,8 @@ import ShoppingList from '../components/ShoppingListScreenItem';
 import EditListScreen from './EditListScreen';
 import CheckListScreen from './CheckListScreen';
 import EditHistoryScreen from './EditHistoryScreen';
+import RecommendationScreen from './RecommendationsScreen';
+import PriceComparisonScreen from './PriceComparisonScreen';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AddListModal from '../components/AddListModal';
 import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
@@ -26,14 +28,25 @@ export const ShoppingListStack = () => {
         },
       }}>
         <Stack.Screen name="MyShoppingLists" component={ShoppingListScreen} options={{title: "My Shopping Lists"}}/>
+
         <Stack.Screen name="CheckItems" component={CheckListScreen} options={({ route }) => ({
-        title: route.params.list.listObj.title, 
+        title: route.params.list.listObj.title + ": Check Items", 
       })}/>
+
         <Stack.Screen name="EditItems" component={EditListScreen} options={({ route }) => ({
-        title: route.params.list.listObj.title,
+        title: route.params.list.listObj.title + ": Edit List", 
       })}/>
+
         <Stack.Screen name="EditHistory" component={EditHistoryScreen} options={({ route }) => ({
-        title: route.params.list.listObj.title,
+        title: route.params.list.listObj.title + ": Edit History", 
+      })}/>
+
+        <Stack.Screen name="Recommend" component={RecommendationScreen} options={({ route }) => ({
+        title: route.params.list.listObj.title + ": Suggestions", 
+      })}/>
+
+        <Stack.Screen name="Compare" component={PriceComparisonScreen} options={({ route }) => ({
+        title: route.params.list.listObj.title + ": Price Comparison", 
       })}/>
     </Stack.Navigator>
     );
@@ -90,7 +103,10 @@ export default function ShoppingListScreen({navigation}) {
     return (
         <SafeAreaView style={globalStyles.container}>
             <AddListModal isVisible={isModalVisible} onClose={handleCloseModal} createList={createNewList}/>
-            <FlatList data={shoppingLists} renderItem={renderItem}/>
+            <FlatList data={shoppingLists}
+             renderItem={renderItem}
+             ListFooterComponent={<View/>}
+              ListFooterComponentStyle={{flex:1, height: 120, marginTop: 10, justifyContent: 'flex-end'}}/>
             <TouchableHighlight onPress={addList} style={styles.addListBtn}>
                 <MaterialCommunityIcons name="plus" color={COLORS.white} size={28}/>
             </TouchableHighlight>
@@ -103,6 +119,7 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 10,
         marginTop: 10,
+        marginHorizontal: 10,
         backgroundColor: 'pink'
     }, 
     addListBtn: {

@@ -1,4 +1,5 @@
-const Store = require('../Models/storeModel');
+const Store = require('../models/storeModel');
+const { findNearestStores }  = require('../findNearestStores');
 
 exports.getAllItems = async (req, res) => {
     try {
@@ -99,4 +100,23 @@ exports.getItemByID = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+  };
+
+exports.searchStores = async (req, res) => {
+      try {
+
+          const location = {};
+          location.latitude = req.query.latitude;
+          location.longitude = req.query.longitude;
+          console.log(location);
+          const nearestStores = findNearestStores(location);
+
+
+          if (!nearestStores) {
+              return res.status(404).json({ error: 'Could not locate any stores near you.' });
+          }
+          res.json(nearestStores);
+      } catch (error) {
+          res.status(500).json({ error: error.message });
+      }
 };

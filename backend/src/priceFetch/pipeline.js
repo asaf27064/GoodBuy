@@ -54,7 +54,7 @@ async function main() {
       await mongoose.disconnect();
       if (count > 0) {
         console.log(`[${now()}] ✅ DB already initialized – skipping INIT.`);
-        process.exit(0);
+        //process.exit(0);
       }
     } catch (err) {
       console.error(`[${now()}] ❌ DB check failed:`, err);
@@ -95,11 +95,11 @@ async function main() {
   await fs.promises.rm(path.join(baseDir, 'Downloads'), { recursive: true, force: true });
   console.log(`[${now()}] 🗑 Deleted Downloads folder`);
 
-  await runCommand(
+  /*await runCommand(
     'STEP 6: sync_and_update_images_r2.js',
     'node',
     ['sync_and_update_images_r2.js', mode]
-  );
+  );*/
 
   const totalTime = hrToMs(process.hrtime(pipelineStart));
   console.log(`\n[${now()}] 🎉 Pipeline completed in ${totalTime}ms (${(totalTime/1000).toFixed(1)}s)`);

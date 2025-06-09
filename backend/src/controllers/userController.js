@@ -1,4 +1,4 @@
-const User = require('../Models/userModel');
+const User = require('../models/userModel');
 
 // Copied directly from item controller, names of functions changed. TODO: implement functions.
 

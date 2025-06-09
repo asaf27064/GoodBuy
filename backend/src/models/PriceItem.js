@@ -1,0 +1,38 @@
+const mongoose = require('mongoose');
+
+const PriceItemSchema = new mongoose.Schema({
+  storeRef:     { type: mongoose.Types.ObjectId, ref: 'Store', required: true, index: true },
+
+  priceFile:    { type: mongoose.Types.ObjectId, ref: 'PriceFile', required: true, index: true },
+  itemCode:     { type: String, required: true, index: true },
+
+  chainId:      { type: String, required: true, index: true },
+  chainName:    { type: String, required: true },
+
+  priceUpdateDate:   { type: Date },
+  lastSaleDateTime:  { type: Date },
+  itemType:          { type: Number },
+  itemName:          { type: String },
+  manufacturerName:  { type: String },
+  manufactureCountry:{ type: String },
+  itemDescription:   { type: String },
+  unitQty:           { type: String },
+  quantity:          { type: Number },
+  unitOfMeasure:     { type: String },
+  isWeighted:        { type: Boolean },
+  qtyInPackage:      { type: Number },
+  itemPrice:         { type: Number},
+  unitOfMeasurePrice:{ type: Number },
+  allowDiscount:     { type: Boolean },
+  itemStatus:        { type: Number },
+  itemId:            { type: String },
+
+}, { timestamps: true });
+
+PriceItemSchema.index({ storeRef: 1, itemCode: 1 });
+
+PriceItemSchema.index({ priceFile: 1, itemCode: 1 });
+PriceItemSchema.index({ itemCode: 1, chainId: 1 });
+PriceItemSchema.index({ itemPrice: 1 });
+
+module.exports = mongoose.model('PriceItem', PriceItemSchema);

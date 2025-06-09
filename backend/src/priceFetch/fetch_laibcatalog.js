@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const axios     = require('axios');
 const fs        = require('fs');
 const path      = require('path');
-const pLimit    = require('p-limit').default;
+const pLimit    = require('p-limit');
 
 const BASE_URL     = 'https://laibcatalog.co.il/';
 const DOWNLOAD_DIR = path.join(__dirname, 'Downloads');

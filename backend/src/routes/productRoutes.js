@@ -4,7 +4,9 @@ const router = express.Router();
 
 router.get('/', productController.getAllProducts);
 
-router.get('/:id', productController.getProductByID);
+router.get('/list_price', productController.getListPriceInStores);
+
+router.get('/:id', productController.getProductByID); // DO NOT MOVE THIS LINE ABOVE list_price! 
 
 router.get('/search/:name', productController.getProductByName);
 
