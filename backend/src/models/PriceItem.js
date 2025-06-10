@@ -27,14 +27,11 @@ const PriceItemSchema = new mongoose.Schema({
   itemStatus:        { type: Number },
   itemId:            { type: String },
 
-}, { timestamps: true });
-
-PriceItemSchema.index({ storeRef: 1, itemCode: 1 });
-
-PriceItemSchema.index({ priceFile: 1, itemCode: 1 });
-PriceItemSchema.index({ itemCode: 1, chainId: 1 });
-PriceItemSchema.index({ itemPrice: 1 });
-PriceItemSchema.index({ itemName: 1 });
+}, {
+  timestamps: true,
+  toJSON:   { virtuals: true },
+  toObject: { virtuals: true }
+})
 
 PriceItemSchema.virtual('imageUrl').get(function() {
   const base = process.env.PUBLIC_DEV_URL
@@ -43,5 +40,4 @@ PriceItemSchema.virtual('imageUrl').get(function() {
     : null
 })
 
-
-module.exports = mongoose.model('PriceItem', PriceItemSchema);
+module.exports = mongoose.model('PriceItem', PriceItemSchema)
