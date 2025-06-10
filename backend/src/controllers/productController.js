@@ -1,62 +1,60 @@
 // backend/src/controllers/productController.js
-// Assumes your server entrypoint runs `require('dotenv').config()`
+// Assumes server.js does `require('dotenv').config()` once at startup
 
-const PriceItem = require('../models/PriceItem')
-const ItemImage = require('../models/ItemImage')
-const mongoose = require('mongoose')
-const ObjectId = mongoose.Types.ObjectId
+const PriceItem  = require('../models/PriceItem')
+const ItemImage  = require('../models/ItemImage')
+const mongoose   = require('mongoose')
+const ObjectId   = mongoose.Types.ObjectId
+
+// Utility to escape user input for regex
+function escapeRegex(text) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+}
 
 /**
  * GET /api/Products/search/:name
- * Returns up to 30 unique items matching the name,
- * with imageUrl built from the virtual, sorted so that
- * items with a found image appear first.
+ * Fast, prefix‐indexed search + group by itemCode for uniqueness.
  */
 exports.searchItems = async (req, res) => {
-  const searchTerm = req.params.name
+  const term = req.params.name || ''
   try {
-    // 1. Aggregate unique PriceItems by itemCode & name
+    // 1. Build prefix regex to leverage itemName index
+    const regex = new RegExp('^' + escapeRegex(term), 'i')
+
+    // 2. Aggregate: match → group by itemCode → limit
     const docs = await PriceItem.aggregate([
-      { $match: { itemName: { $regex: searchTerm, $options: 'i' } } },
-      {
-        $group: {
+      { $match: { itemName: { $regex: regex } } },
+      { $group: {
           _id: '$itemCode',
           itemCode: { $first: '$itemCode' },
           itemName: { $first: '$itemName' }
         }
       },
       { $limit: 30 }
-    ])
+    ]).exec()
 
-    // 2. Build the base results array with imageUrl via virtual
-    const base = process.env.PUBLIC_DEV_URL || ''
-    const items = docs.map(d => ({
-      itemCode: d.itemCode,
-      itemName: d.itemName,
-      imageUrl: base
-        ? `${base}/images/${d.itemCode}.png`
-        : null
-    }))
-
-    // 3. Batch-fetch which codes actually have a found image
-    const codes = items.map(i => i.itemCode)
+    // 3. (Optional) Fetch which of these codes have images
+    const codes  = docs.map(d => d.itemCode)
     const images = await ItemImage.find(
       { itemCode: { $in: codes }, status: 'found' },
       'itemCode'
     ).lean()
-
     const foundSet = new Set(images.map(i => i.itemCode))
 
-    // 4. Sort so that items with images come first
-    items.sort((a, b) => {
-      const aHas = foundSet.has(a.itemCode)
-      const bHas = foundSet.has(b.itemCode)
-      if (aHas && !bHas) return -1
-      if (!aHas && bHas) return 1
-      return 0
-    })
+    // 4. Build results with virtual URL + a flag if needed, sorting by image presence
+    const base = process.env.PUBLIC_DEV_URL || ''
+    const results = docs
+      .map(d => ({
+        itemCode: d.itemCode,
+        itemName: d.itemName,
+        imageUrl: base
+          ? `${base}/images/${d.itemCode}.png`
+          : null,
+        hasImage: foundSet.has(d.itemCode)
+      }))
+      .sort((a, b) => (a.hasImage === b.hasImage ? 0 : a.hasImage ? -1 : 1))
 
-    return res.json({ results: items })
+    return res.json({ results })
   } catch (err) {
     console.error('searchItems error:', err)
     return res.status(500).json({ message: 'Server error' })
