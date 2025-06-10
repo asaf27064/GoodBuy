@@ -7,8 +7,7 @@ import { COLORS } from '../styles/colors';
 const ProductListScreenItem = ({product, removeProduct}) => {
 
     const MIN_UNITS = 1;
-    const MAX_UNITS = 99; // Placeholder, consider different upper limit.
-
+    const MAX_UNITS = 99;
     const [prodAmount, setProdAmount] = useState(product.numUnits);
 
     const addUnit = () => {
@@ -22,7 +21,6 @@ const ProductListScreenItem = ({product, removeProduct}) => {
     }
 
     const writeAmount = () => {
-        // When input is inserted manually.
     }
 
     const removeItem = () => {
