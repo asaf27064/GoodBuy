@@ -7,7 +7,8 @@ import {
   FlatList,
   View,
   Text,
-  TouchableHighlight
+  TouchableHighlight,
+  Alert
 } from 'react-native'
 import { useTheme, IconButton } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -20,15 +21,13 @@ export default function EditListScreen({ route, navigation }) {
   const theme = useTheme()
   const insets = useSafeAreaInsets()
 
-  // Initialize from route.params.listObj
+  // Initialize from route params
   const { listObj: initialList } = route.params
   const [listObj, setListObj] = useState(initialList)
   const [products, setProducts] = useState(initialList.products || [])
-
-  // Keep original products for diff
   const initialRef = useRef([...initialList.products || []])
 
-  // Update header button to pass the latest listObj+products
+  // Header + Add button
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -45,36 +44,30 @@ export default function EditListScreen({ route, navigation }) {
     })
   }, [navigation, theme.colors.onPrimary, listObj, products])
 
-  // Handle addedItem from AddItemScreen
+  // Handle items returned from AddItemScreen
   useEffect(() => {
     const added = route.params?.addedItem
     if (added) {
       const newEntry = { product: added, numUnits: 1 }
       const newProducts = [...products, newEntry]
-      setProducts(newProducts)
-
       const updatedList = { ...listObj, products: newProducts }
-      setListObj(updatedList)
 
-      // Reset route params so we don't re-add on every render
-      navigation.setParams({ listObj: updatedList, addedItem: undefined })
+      setProducts(newProducts)
+      setListObj(updatedList)
+      // Reset route param to avoid re-adding on re-render
+      navigation.setParams({ addedItem: undefined, listObj: updatedList })
     }
   }, [route.params?.addedItem])
 
-  // Compute edit log
+  // Compute edit log entries
   const diffLog = (oldList, newList) => {
     const me = 'Me'
     const edits = []
 
     oldList.forEach(o => {
-      const m = newList.find(n => n.product.itemName === o.product.itemName)
+      const m = newList.find(n => n.product.itemCode === o.product.itemCode)
       if (!m) {
-        edits.push({
-          product: o.product,
-          action: 'removed',
-          changedBy: me,
-          timeStamp: new Date()
-        })
+        edits.push({ product: o.product, action: 'removed', changedBy: me, timeStamp: new Date() })
       } else if (m.numUnits !== o.numUnits) {
         edits.push({
           product: o.product,
@@ -87,38 +80,44 @@ export default function EditListScreen({ route, navigation }) {
     })
 
     newList.forEach(n => {
-      if (!oldList.find(o => o.product.itemName === n.product.itemName)) {
-        edits.push({
-          product: n.product,
-          action: 'added',
-          changedBy: me,
-          timeStamp: new Date()
-        })
+      if (!oldList.find(o => o.product.itemCode === n.product.itemCode)) {
+        edits.push({ product: n.product, action: 'added', changedBy: me, timeStamp: new Date() })
       }
     })
 
     return edits
   }
 
-  // Save changes to backend and update state/navigation
+  // Save changes via PUT
   const saveChanges = async () => {
-    const edits = diffLog(initialRef.current, products)
+    const changes = diffLog(initialRef.current, products)
     const payload = {
-      list: { ...listObj, products, editLog: [...(listObj.editLog || []), ...edits] },
-      changes: edits
+      list: {
+        ...listObj,
+        products,
+        editLog: [...(listObj.editLog || []), ...changes]
+      },
+      changes
     }
+
     try {
       const { data } = await axios.put(
         `/api/ShoppingLists/${listObj._id}`,
         payload
       )
-      // data.list is the updated list from backend
+      // Persisted on server—update local state & navigation
       setListObj(data.list)
       setProducts(data.list.products)
       initialRef.current = [...data.list.products]
       navigation.setParams({ listObj: data.list })
+      Alert.alert('Success', 'List saved successfully')
     } catch (e) {
-      console.error('Save changes error:', e)
+      console.error('Save changes error:', e.response?.status, e.response?.data || e.message)
+      Alert.alert(
+        'Save Failed',
+        JSON.stringify(e.response?.data || e.message, null, 2),
+        [{ text: 'OK' }]
+      )
     }
   }
 
@@ -132,9 +131,10 @@ export default function EditListScreen({ route, navigation }) {
             product={item}
             removeProduct={p => {
               const filtered = products.filter(x => x !== p)
+              const updatedList = { ...listObj, products: filtered }
               setProducts(filtered)
-              setListObj({ ...listObj, products: filtered })
-              navigation.setParams({ listObj: { ...listObj, products: filtered } })
+              setListObj(updatedList)
+              navigation.setParams({ listObj: updatedList })
             }}
           />
         )}

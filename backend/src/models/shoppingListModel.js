@@ -1,33 +1,24 @@
-
+// backend/src/models/shoppingListModel.js
 
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-//const Product = require('./productModel');
-
-
-// Entity "Product" shouldn't have an "numUnits" field, so it's explicitly added here.
-
+// Now we allow embedding the entire product object (a mixed type)
 const productWithAmountSchema = new Schema({
-    product: { type: String, ref: 'Product', required: true },
-    numUnits: { type: Number, required: true, default: 1 }
-});
+  product: { 
+    type: Schema.Types.Mixed,    // <-- allow any shape: { itemCode, itemName, imageUrl, ... }
+    required: true 
+  },
+  numUnits: { type: Number, required: true, default: 1 }
+}, { _id: false });
 
-/*const editLogEntrySchema = new Schema({
-    product: { type: String, ref: 'Product'},
-    action: { type: String, enum: ['created', 'updated', 'deleted'], required: true },
-    changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    changeDetails: { type: Object },
-    timestamp: { type: Date, default: Date.now }
-});*/
-
+// You may optionally still keep editLog entries typed as you like
 const shoppingListSchema = new Schema({
-    members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    title: { type: String },
-    importantList: { type: Boolean, required: true, default: false}, // Will determine whether this list affects recommendations
-    products: [productWithAmountSchema],
-    editLog: []
-});
+  members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  title: { type: String },
+  importantList: { type: Boolean, required: true, default: false },
+  products: [productWithAmountSchema],
+  editLog: { type: Array, default: [] }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Shopping List', shoppingListSchema);
-
