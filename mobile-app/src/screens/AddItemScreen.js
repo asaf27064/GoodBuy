@@ -1,59 +1,60 @@
 // mobile-app/src/screens/AddItemScreen.js
-import React, { useState, useCallback } from 'react';
-import { View, FlatList } from 'react-native';
-import { Searchbar, List, useTheme } from 'react-native-paper';
-import debounce from 'lodash/debounce';
-import axios from 'axios';
-import { API_BASE } from '../config';
 
-axios.defaults.baseURL = API_BASE;
+import React, { useState, useCallback } from 'react'
+import { View, FlatList } from 'react-native'
+import { Searchbar, List, useTheme } from 'react-native-paper'
+import debounce from 'lodash/debounce'
+import axios from 'axios'
+import { API_BASE } from '../config'
+
+axios.defaults.baseURL = API_BASE
 
 export default function AddItemScreen({ route, navigation }) {
-  const theme = useTheme();
-  const { listObj } = route.params;       // receive original listObj
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
+  const theme   = useTheme()
+  const { listObj } = route.params
+  const [query, setQuery]   = useState('')
+  const [results, setResults] = useState([])
 
-  // debounced search
+  // Debounced search against your new endpoint
   const doSearch = useCallback(
     debounce(async term => {
       if (!term.trim()) {
-        setResults([]);
-        return;
+        setResults([])
+        return
       }
       try {
-        const { data } = await axios.get(`/api/Products/search/${term}`);
-        setResults(data.results);
+        const { data } = await axios.get(`/api/Products/search/${term}`)
+        setResults(data.results) // each result has itemCode, itemName, imageUrl
       } catch (e) {
-        console.error(e);
+        console.error(e)
       }
     }, 300),
     []
-  );
+  )
 
   const onChange = text => {
-    setQuery(text);
-    doSearch(text);
-  };
+    setQuery(text)
+    doSearch(text)
+  }
 
-  const renderItem = ({ item, index }) => (
+  const renderItem = ({ item }) => (
     <List.Item
       title={item.itemName}
+      description={`Code: ${item.itemCode}`}
       left={props => <List.Icon {...props} icon="cube-outline" />}
       onPress={() => {
         navigation.replace('EditItems', {
           listObj,
           addedItem: {
             itemCode: item.itemCode,
-            name: item.itemName,
-            image: item.imageUrl || '',    // If you have no imageUrl, just use ''
+            name:     item.itemName,
+            image:    item.imageUrl,
             numUnits: 1
           }
-        });
+        })
       }}
-
     />
-  );
+  )
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -65,10 +66,10 @@ export default function AddItemScreen({ route, navigation }) {
       />
       <FlatList
         data={results}
-        keyExtractor={(item, i) => `${item.itemName}_${i}`}
+        keyExtractor={(item, i) => item.itemCode + '_' + i}
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
       />
     </View>
-  );
+  )
 }

@@ -36,5 +36,12 @@ PriceItemSchema.index({ itemCode: 1, chainId: 1 });
 PriceItemSchema.index({ itemPrice: 1 });
 PriceItemSchema.index({ itemName: 1 });
 
+PriceItemSchema.virtual('imageUrl').get(function() {
+  const base = process.env.PUBLIC_DEV_URL
+  return base
+    ? `${base}/images/${this.itemCode}.png`
+    : null
+})
+
 
 module.exports = mongoose.model('PriceItem', PriceItemSchema);

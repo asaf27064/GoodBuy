@@ -9,4 +9,6 @@ const ItemImageSchema = new mongoose.Schema({
   attempts:      { type: Number, default: 0 }
 }, { timestamps: true });
 
+ItemImageSchema.index({ itemCode: 1, status: 1 });
+
 module.exports = mongoose.model('ItemImage', ItemImageSchema);
