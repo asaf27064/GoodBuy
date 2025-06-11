@@ -1,4 +1,3 @@
-// backend/src/models/purchaseModel.js
 const mongoose = require('mongoose')
 
 const purchaseSchema = new mongoose.Schema({
