@@ -25,13 +25,16 @@ exports.getUserPurchases = async (req, res) => {
 exports.createPurchase = async (req, res) => {
   try {
     const { listId, timestamp, purchasedProducts } = req.body
+    const userId = req.user.id
+
     const updatedList = await shoppingListService.emptyProductsAndEditLog(listId)
     if (!updatedList) return res.status(404).json({ error: 'List not found' })
 
     const newPurchase = new Purchase({
       listId,
       timeStamp: timestamp,
-      products: purchasedProducts    // full embedded product objects + numUnits
+      purchasedBy: userId,
+      products: purchasedProducts
     })
 
     await newPurchase.save()

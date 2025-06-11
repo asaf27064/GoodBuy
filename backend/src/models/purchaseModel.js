@@ -1,3 +1,4 @@
+// backend/src/models/purchaseModel.js
 const mongoose = require('mongoose')
 
 const purchaseSchema = new mongoose.Schema({
@@ -9,6 +10,11 @@ const purchaseSchema = new mongoose.Schema({
   timeStamp: {
     type: Date,
     default: Date.now
+  },
+  purchasedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   products: [
     {
