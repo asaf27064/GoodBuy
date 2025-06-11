@@ -8,4 +8,6 @@ router.get('/:user_id', purchaseController.getUserPurchases);
 
 router.post('/', auth, purchaseController.createPurchase);
 
+router.get('/history', auth, purchaseController.getHistory);
+
 module.exports = router;

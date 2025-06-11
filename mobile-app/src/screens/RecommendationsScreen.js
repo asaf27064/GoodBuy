@@ -1,80 +1,89 @@
-import React from 'react'
-import {
-  View,
-  SafeAreaView,
-  FlatList,
-  StyleSheet,
-  Dimensions
-} from 'react-native'
-import { useTheme } from 'react-native-paper'
-import makeGlobalStyles from '../styles/globalStyles'
-import Recommendation from '../components/RecommendationListItem'
+// mobile-app/src/screens/RecommendationsScreen.js
 
-const { width } = Dimensions.get('window')
+import React, { useState, useEffect } from 'react'
+import { SafeAreaView, FlatList, View, Text, ActivityIndicator, StyleSheet } from 'react-native'
+import { useTheme, Card, Title, Paragraph, Button } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import axios from 'axios'
+import { useAuth } from '../contexts/AuthContext'
 
-export default function RecommendationScreen({ navigation }) {
+export default function RecommendationsScreen({ route, navigation }) {
   const theme = useTheme()
-  const globals = makeGlobalStyles(theme)
-  const styles = makeStyles(theme)
+  const insets = useSafeAreaInsets()
+  const { user } = useAuth()
+  const { listObj } = route.params
 
-  const myRecommendations = [
-    { name: 'item1', reason: 'you always buy this' },
-    { name: 'item2', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item3', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item4', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item5', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item6', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item7', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item8', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item9', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item10', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item11', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item12', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item13', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item14', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item15', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' },
-    { name: 'item16', picture: 'https://www.nestleprofessional.co.il/sites/default/files/styles/np_product_detail/public/product_images/6930925_7290000066196.jpg', reason: 'I feel like it' }
-  ]
+  const [recs, setRecs] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const renderItem = ({ item, index }) => (
-    <View style={styles.item}>
-      <Recommendation
-        name={item.name}
-        reason={item.reason}
-        picture={item.picture}
-        navigation={navigation}
-      />
-    </View>
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const { data } = await axios.get(
+          `/api/Recommendations?listId=${listObj._id}`
+        )
+        setRecs(data)
+      } catch (err) {
+        console.error('Error fetching recommendations:', err)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [listObj._id])
+
+  const handleAdd = item => {
+    navigation.navigate('EditItems', {
+      addedItem: item,
+      listObj
+    })
+  }
+
+  const handleDismiss = itemCode => {
+    setRecs(r => r.filter(r => r.itemCode !== itemCode))
+  }
+
+  const renderRec = ({ item }) => (
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      {item.image && <Card.Cover source={{ uri: item.image }} />}
+      <Card.Content>
+        <Title>{item.name}</Title>
+        <Paragraph>Last bought: {new Date(item.lastPurchased).toLocaleDateString()}</Paragraph>
+      </Card.Content>
+      <Card.Actions>
+        <Button onPress={() => handleDismiss(item.itemCode)}>Dismiss</Button>
+        <Button onPress={() => handleAdd(item)}>Add</Button>
+      </Card.Actions>
+    </Card>
   )
 
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    )
+  }
+
   return (
-    <SafeAreaView style={globals.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
-        data={myRecommendations}
-        numColumns={2}
-        columnWrapperStyle={styles.columnWrapper}
-        renderItem={renderItem}
-        keyExtractor={(item, idx) => item.name + idx}
+        data={recs}
+        keyExtractor={r => r.itemCode}
+        renderItem={renderRec}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
+        ListEmptyComponent={
+          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>
+            No recommendations right now.
+          </Text>
+        }
       />
     </SafeAreaView>
   )
 }
 
-function makeStyles(theme) {
-  return StyleSheet.create({
-    columnWrapper: {
-      justifyContent: 'space-between',
-      paddingHorizontal: 10
-    },
-    item: {
-      width: width / 2 - 20,
-      borderStyle: 'dashed',
-      borderColor: theme.colors.onSurface,
-      borderWidth: 2,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginVertical: 5,
-      borderRadius: theme.roundness
-    }
-  })
-}
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: { marginBottom: 12 },
+  emptyText: { textAlign: 'center', marginTop: 32 }
+})
