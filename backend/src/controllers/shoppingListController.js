@@ -1,5 +1,3 @@
-// backend/src/controllers/shoppingListController.js
-
 const ShoppingList = require('../models/shoppingListModel')
 
 exports.getAllUserShoppingLists = async (req, res) => {
@@ -62,7 +60,6 @@ exports.updateListProducts = async (req, res) => {
     }
 
     const { list: updatedListBody, changes } = req.body
-    // Overwrite products & append editLog
     list.products = updatedListBody.products
     list.editLog = [...(list.editLog || []), ...changes]
     const updated = await list.save()

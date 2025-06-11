@@ -1,5 +1,3 @@
-// mobile-app/src/screens/AddItemScreen.js
-
 import React, { useState, useCallback } from 'react'
 import {
   View,
@@ -34,7 +32,6 @@ export default function AddItemScreen({ route, navigation }) {
   const [results, setResults]   = useState([])
   const [viewMode, setViewMode] = useState('list') // 'list' or 'grid'
 
-  // Debounced search
   const doSearch = useCallback(
     debounce(async term => {
       if (!term.trim()) {
@@ -56,7 +53,6 @@ export default function AddItemScreen({ route, navigation }) {
     doSearch(text)
   }
 
-  // Thumbnail with fallback icon
   const Thumbnail = ({ uri, style }) => {
     const [error, setError] = useState(false)
     if (!uri || error) {
@@ -152,7 +148,7 @@ export default function AddItemScreen({ route, navigation }) {
       </View>
 
       <FlatList
-        key={viewMode}                 // Force remount when layout changes
+        key={viewMode}
         data={results}
         keyExtractor={(item, i) => `${item.itemCode}_${i}`}
         renderItem={viewMode === 'list' ? renderListItem : renderCardItem}

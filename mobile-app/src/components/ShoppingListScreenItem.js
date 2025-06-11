@@ -1,5 +1,3 @@
-// mobile-app/src/components/ShoppingListScreenItem.js
-
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Card, Title, Paragraph, useTheme } from 'react-native-paper'
@@ -40,7 +38,6 @@ export default function ShoppingListScreenItem({ listObj, navigation }) {
   )
 }
 
-// A small reusable button inside the Card.Actions
 function ActionButton({ icon, onPress }) {
   const theme = useTheme()
   return (

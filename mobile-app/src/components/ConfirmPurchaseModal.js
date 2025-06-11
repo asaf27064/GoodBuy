@@ -5,7 +5,7 @@ import globalStyles from '../styles/globalStyles'
 export default function ConfirmPurchaseModal({
   isVisible,
   onClose,
-  purchasedItems,    // array of { product: {...}, numUnits }
+  purchasedItems,
   handlePurchase,
   allCheckedFlag
 }) {

@@ -9,7 +9,6 @@ const RecommendationListItem = ({name, reason, picture, navigation}) => {
     }
 
     const addItemToList = () => {
-        // pop up window
     }
 
     return (

@@ -69,12 +69,12 @@ const saveChanges = async () => {
 
   try {
     const { data } = await axios.put(`/api/ShoppingLists/${listObj._id}`, payload)
-    const updated = data.list || data              // <<—— grab the real list
+    const updated = data.list || data
     setListObj(updated)
     setProducts(updated.products || [])
     initialRef.current = [ ...(updated.products || []) ]
     Alert.alert('Success', 'List saved successfully')
-    navigation.goBack()                            // pop back; parent will refresh
+    navigation.goBack()
   } catch (e) {
     Alert.alert('Save Failed', JSON.stringify(e.response?.data || e.message, null, 2), [{ text: 'OK' }])
   }
