@@ -23,27 +23,20 @@ exports.getUserPurchases = async (req, res) => {
 };
 
 exports.createPurchase = async (req, res) => {
-    try {
-        console.log(req.body);
+  try {
+    const { listId, timestamp, purchasedProducts } = req.body
+    const updatedList = await shoppingListService.emptyProductsAndEditLog(listId)
+    if (!updatedList) return res.status(404).json({ error: 'List not found' })
 
-        const updatedList = await shoppingListService.emptyProductsAndEditLog(req.body.listId);
+    const newPurchase = new Purchase({
+      listId,
+      timeStamp: timestamp,
+      products: purchasedProducts    // full embedded product objects + numUnits
+    })
 
-        if (!updatedList) {
-            return res.status(404).json({ error: 'List not found' });
-        }
-
-        const newPurchase = new Purchase ({ 
-            listId: req.body.listId, 
-            timeStamp: req.body.timestamp,
-            products: req.body.purchasedProducts,
-        })
-
-        
-        await newPurchase.save();
-        res.status(201).json(newPurchase);
-    }
-    
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+    await newPurchase.save()
+    res.status(201).json(newPurchase)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}

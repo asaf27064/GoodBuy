@@ -1,122 +1,100 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react'
+import axios from 'axios'
 import {
-  View,
+  SafeAreaView,
   FlatList,
   Text,
-  SafeAreaView,
-  TouchableHighlight
-} from 'react-native';
-import { useTheme } from 'react-native-paper';
-import makeGlobalStyles from '../styles/globalStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ProductCheckListItem from '../components/CheckListScreenItem';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal';
-import { API_BASE } from '../config';
+  TouchableHighlight,
+  Alert
+} from 'react-native'
+import { useTheme } from 'react-native-paper'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import makeGlobalStyles from '../styles/globalStyles'
+import ProductCheckListItem from '../components/CheckListScreenItem'
+import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal'
+import { API_BASE } from '../config'
 
-MaterialCommunityIcons.loadFont();
+export default function CheckListScreen({ route, navigation }) {
+  const theme = useTheme()
+  const styles = makeGlobalStyles(theme)
+  const insets = useSafeAreaInsets()
 
-export default function CheckListScreen({ route }) {
-  const theme = useTheme();
-  const styles = makeGlobalStyles(theme);
-  const insets = useSafeAreaInsets();
+  const listObj = route.params.listObj
+  const [checkedSet, setCheckedSet] = useState(new Set())
+  const [modalVisible, setModalVisible] = useState(false)
 
-  const currList = route.params.list.listObj;
-  const [checkedProducts, setCheckedProducts] = useState(new Set());
-  const [isModalVisible, setModalVisible] = useState(false);
+  const unchecked = listObj.products.filter(p => !checkedSet.has(p.product.itemCode))
+  const checked   = listObj.products.filter(p =>  checkedSet.has(p.product.itemCode))
 
-  const uncheckedItems = currList.products.filter(
-    p => !checkedProducts.has(p.product._id)
-  );
-  const checkedItems = currList.products.filter(p =>
-    checkedProducts.has(p.product._id)
-  );
+  const toggle = item => {
+    const next = new Set(checkedSet)
+    const code = item.product.itemCode
+    next.has(code) ? next.delete(code) : next.add(code)
+    setCheckedSet(next)
+  }
 
-  const handleCheck = item => {
-    const updatedChecked = new Set(checkedProducts);
-    if (checkedProducts.has(item.product._id)) {
-      updatedChecked.delete(item.product._id);
-    } else {
-      updatedChecked.add(item.product._id);
-    }
-    setCheckedProducts(updatedChecked);
-  };
-
-  const confirmFinishPurchase = () => {
-    setModalVisible(true);
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
-  };
-
-  const handleFinishPurchase = async (purchasedItems) => {
-    const data = {
-      listId: currList._id,
-      timestamp: Date.now(),
-      purchasedProducts: purchasedItems
-    };
-
+  const finishPurchase = async items => {
     try {
-      const response = await axios.post(`${API_BASE}/api/Purchases/`, data);
-      console.log('Added list to your purchase history, emptied products and editlog');
-      currList.products = [];
-      currList.editLog = [];
+      await axios.post(`${API_BASE}/api/Purchases`, {
+        listId:            listObj._id,
+        timestamp:         Date.now(),
+        purchasedProducts: items.map(({ product, numUnits }) => ({ product, numUnits }))
+      })
+      Alert.alert('Success', 'Purchase recorded and list cleared.')
+      setCheckedSet(new Set())
+      navigation.goBack()
     } catch (err) {
-      console.error('Error adding purchase:', err);
+      Alert.alert('Error', err.response?.data?.error || err.message)
+    } finally {
+      setModalVisible(false)
     }
-
-    handleCloseModal();
-  };
+  }
 
   const renderItem = ({ item }) => (
     <ProductCheckListItem
       product={item}
-      checkStatus={checkedProducts.has(item.product._id)}
-      handleCheck={handleCheck}
+      checkStatus={checkedSet.has(item.product.itemCode)}
+      handleCheck={() => toggle(item)}
     />
-  );
+  )
 
   return (
     <SafeAreaView style={styles.container}>
       <ConfirmPurchaseModal
-        isVisible={isModalVisible}
-        onClose={handleCloseModal}
-        purchasedItems={checkedItems}
-        handlePurchase={handleFinishPurchase}
-        allCheckedFlag={uncheckedItems.length === 0}
+        isVisible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        purchasedItems={checked}
+        handlePurchase={finishPurchase}
+        allCheckedFlag={unchecked.length === 0}
       />
 
       <Text style={styles.headerText}>Products to buy:</Text>
       <FlatList
-        data={uncheckedItems}
-        keyExtractor={i => i.product._id}
+        data={unchecked}
+        keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
         renderItem={renderItem}
       />
-      {checkedItems.length > 0 && (
+
+      {checked.length > 0 && (
         <>
           <Text style={styles.headerText}>Products bought:</Text>
           <FlatList
-            data={checkedItems}
-            keyExtractor={i => i.product._id}
+            data={checked}
+            keyExtractor={(item, idx) => `${item.product.itemCode}-${idx}`}
             renderItem={renderItem}
           />
         </>
       )}
+
       <TouchableHighlight
         style={[
           styles.addListBtn,
-          {
-            bottom: insets.bottom + 60 + 10,
-            backgroundColor: theme.colors.secondary
-          }
+          { bottom: insets.bottom + 70, backgroundColor: theme.colors.secondary }
         ]}
-        onPress={confirmFinishPurchase}
+        onPress={() => setModalVisible(true)}
       >
         <Text style={styles.text}>Finish Purchase</Text>
       </TouchableHighlight>
     </SafeAreaView>
-  );
+  )
 }
