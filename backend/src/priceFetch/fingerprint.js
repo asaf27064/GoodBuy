@@ -1,4 +1,3 @@
-// backend/src/priceFetch/fingerprint.js
 const crypto = require('crypto');
 
 /**

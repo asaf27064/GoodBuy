@@ -1,4 +1,3 @@
-// compare-stores-by-chainId.js
 const { MongoClient } = require('mongodb');
 
 async function run() {

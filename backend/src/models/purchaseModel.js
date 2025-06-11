@@ -1,34 +1,34 @@
-// File: models/Purchase.js
+const mongoose = require('mongoose')
 
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-
-const purchaseSchema = new Schema({
-
+const purchaseSchema = new mongoose.Schema({
   listId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Shopping List',
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ShoppingList',
     required: true
   },
-  timestamp: {
+  timeStamp: {
     type: Date,
     default: Date.now
   },
+  purchasedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   products: [
     {
-    _id: false,
       product: {
-        type: String,
-        ref: 'Product',
-        required: true
+        itemCode: { type: String, required: true },
+        name:     { type: String, required: true },
+        image:    { type: String },
+        numUnits: { type: Number, default: 1 }
       },
       numUnits: {
         type: Number,
-        required: true,
-        default: 1
+        required: true
       }
     }
   ]
-});
+})
 
-module.exports = mongoose.model('Purchase', purchaseSchema);
+module.exports = mongoose.model('Purchase', purchaseSchema)

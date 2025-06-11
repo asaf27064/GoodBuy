@@ -4,7 +4,7 @@ import globalStyles from '../styles/globalStyles';
 import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
 import { COLORS } from '../styles/colors';
 
-const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp, /* details */}) => {
+const EditHistoryScreenItem = ({changedProd, changedBy, action, timeStamp,}) => {
     
     
     const defineBackgroundColor = (action) => {

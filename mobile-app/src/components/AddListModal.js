@@ -1,5 +1,3 @@
-// mobile-app/src/components/AddListModal.js
-
 import React, { useState, useEffect } from 'react'
 import {
   Modal,
@@ -14,12 +12,12 @@ import {
 import axios from 'axios'
 import { useTheme } from 'react-native-paper'
 import globalStylesFactory from '../styles/globalStyles'
-import { useAuth } from '../contexts/AuthContext'   // import useAuth
+import { useAuth } from '../contexts/AuthContext'
 
 export default function AddListModal({ isVisible, onClose, createList }) {
   const theme = useTheme()
   const gs = globalStylesFactory(theme)
-  const { user } = useAuth()                      // get current user
+  const { user } = useAuth()
 
   const [titleText, setTitleText] = useState('')
   const [users, setUsers] = useState([])
@@ -31,11 +29,9 @@ export default function AddListModal({ isVisible, onClose, createList }) {
     axios
       .get('/api/Users')
       .then(({ data }) => {
-        // DEBUG: log correct user.id and fetched IDs
         console.log('Current user ID:', String(user?.id))
         console.log('Fetched user IDs:', data.map(u => String(u._id)))
 
-        // filter out the current user using user.id
         const filtered = Array.isArray(data)
           ? data.filter(u => String(u._id) !== String(user?.id))
           : []
@@ -50,7 +46,6 @@ export default function AddListModal({ isVisible, onClose, createList }) {
     )
 
   const onSubmit = () => {
-    // always include current user.id, no duplicates
     const memberIds = Array.from(new Set([...(selected || []), user.id]))
     createList(titleText, memberIds, important)
     setTitleText('')

@@ -1,67 +1,48 @@
+import React from 'react'
+import { Modal, View, Text, TouchableHighlight, StyleSheet } from 'react-native'
+import globalStyles from '../styles/globalStyles'
 
-import React, {useState} from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableHighlight } from 'react-native';
-import globalStyles from '../styles/globalStyles';
-import BouncyCheckbox from "react-native-bouncy-checkbox";
-
-const uncheckedMessage = "You still have unchecked items."
-
-const AddListModal = ({ isVisible, onClose, purchasedItems, handlePurchase, allCheckedFlag}) => {
-
-  const confirmPruchase = () => {
-    handlePurchase(purchasedItems);
-  }
-
+export default function ConfirmPurchaseModal({
+  isVisible,
+  onClose,
+  purchasedItems,
+  handlePurchase,
+  allCheckedFlag
+}) {
   return (
-    <Modal
-      transparent={true}
-      visible={isVisible}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalBackground}>
-        <View style={styles.modalContainer}>
-            <TouchableHighlight onPress={onClose}>
-                <Text>Close</Text>
-            </TouchableHighlight>
-            <View style={styles.textContainer}>
-                {!allCheckedFlag && (<Text>{uncheckedMessage}</Text>)}       
-                <Text>Have you finished your shopping?{'\n'}</Text>
-                <Text style={{fontSize: 11}}>Confirming will empty the list and add checked items to purchase history.</Text>
-            </View>
-            <TouchableHighlight onPress={confirmPruchase} style={globalStyles.confirmBtn}>
-                <Text>Confirm</Text>
-            </TouchableHighlight>
-
+    <Modal transparent visible={isVisible} animationType="fade" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.container}>
+          <TouchableHighlight onPress={onClose}>
+            <Text>✕</Text>
+          </TouchableHighlight>
+          {!allCheckedFlag && <Text style={styles.warn}>You still have unchecked items.</Text>}
+          <Text style={styles.prompt}>Have you finished your shopping?</Text>
+          <Text style={styles.sub}>
+            Confirming will empty the list and record the checked items in your history.
+          </Text>
+          <TouchableHighlight
+            style={globalStyles.confirmBtn}
+            onPress={() => handlePurchase(purchasedItems)}
+          >
+            <Text>Confirm</Text>
+          </TouchableHighlight>
         </View>
       </View>
     </Modal>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  backdrop: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)'
   },
-  modalContainer: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center'
+  container: {
+    width: '80%', padding: 16, backgroundColor: 'white',
+    borderRadius: 8, alignItems: 'center'
   },
-  textContainer: {
-    marginVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-});
-
-export default AddListModal;
+  warn: { marginBottom: 8, color: 'tomato' },
+  prompt: { fontSize: 16, fontWeight: '600', marginVertical: 8 },
+  sub: { fontSize: 12, color: '#555', textAlign: 'center', marginBottom: 16 }
+})

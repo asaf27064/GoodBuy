@@ -1,13 +1,11 @@
 const express = require('express');
 const purchaseController = require('../controllers/purchaseController');
 const router = express.Router();
+const auth = require('../middleware/auth')
+
 
 router.get('/:user_id', purchaseController.getUserPurchases);
 
-router.post('/', purchaseController.createPurchase);
-
-//router.put('/:id', purchaseController.updateItem);
-
-//router.delete('/:id', purchaseController.deleteItem);
+router.post('/', auth, purchaseController.createPurchase);
 
 module.exports = router;
