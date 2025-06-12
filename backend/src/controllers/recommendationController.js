@@ -28,7 +28,7 @@ exports.getRecs = async (req, res) => {
     const prodDocs = await Product.find({ itemCode: { $in: codes } }).lean()
     const prodMap  = Object.fromEntries(prodDocs.map(p => [p.itemCode, p]))
 
-    // Enrich and respond
+    // respond
     const detailed = recs.map(r => {
       const match = history
         .flatMap(b => b.products)

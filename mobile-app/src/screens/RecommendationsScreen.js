@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { SafeAreaView, FlatList, View, Text, ActivityIndicator, StyleSheet } from 'react-native'
-import { useTheme, Card, Title, Paragraph, Caption, Button } from 'react-native-paper'
+import { useTheme, Card, Title, Paragraph, Caption, IconButton } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,7 +15,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       try {
         const { data } = await axios.get(
           `/api/Recommendations?listId=${listObj._id}`
@@ -34,37 +34,63 @@ export default function RecommendationsScreen({ route, navigation }) {
 
   const renderRec = ({ item }) => {
     const lastDate = item.lastPurchased ? new Date(item.lastPurchased) : null
-    const weekdayName = lastDate
-      ? lastDate.toLocaleDateString(undefined, { weekday: 'long' })
-      : ''
+    const infoDate = lastDate
+      ? lastDate.toLocaleDateString()
+      : 'Never purchased'
+    let infoLabel = ''
+    switch (item.method) {
+      case 'habit': {
+        const weekday = lastDate.toLocaleDateString(undefined, { weekday: 'long' })
+        infoLabel = `Habit: you buy this on ${weekday}`
+        break
+      }
+      case 'co-occurrence':
+        infoLabel = 'Often bought with items in your list'
+        break
+      case 'personal':
+        infoLabel = 'Based on your purchase history'
+        break
+      case 'novelty':
+        infoLabel = 'New item: give it a try!'
+        break
+    }
 
     return (
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
         {item.image && (
-          <Card.Cover source={{ uri: item.image }} style={styles.cardCover} />
+          <Card.Cover
+            source={{ uri: item.image }}
+            style={styles.cardCover}
+            resizeMode="cover"
+          />
         )}
-        <Card.Content>
-          <Title style={styles.title}>{item.name}</Title>
-          <Paragraph style={styles.paragraph}>
-            Last bought: {lastDate ? lastDate.toLocaleDateString() : 'Never'}
+        <Card.Content style={styles.content}>
+          <View style={styles.headerRow}>
+            <Title style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
+              {item.name}
+            </Title>
+            <IconButton
+              icon="close"
+              size={20}
+              onPress={() => handleDismiss(item.itemCode)}
+              color={theme.colors.disabled}
+            />
+          </View>
+          <Paragraph style={styles.paragraph} numberOfLines={1}>
+            {infoDate}
           </Paragraph>
-          <Caption style={{ color: theme.colors.placeholder }}>
-            {item.method === 'habit'
-              ? `Weekly habit: typically on ${weekdayName}`
-              : item.method === 'co-occurrence'
-              ? 'Often bought with items in your list'
-              : item.method === 'personal'
-              ? 'Based on your purchase history'
-              : 'Surprise! Try something new'}
+          <Caption style={[styles.caption, { color: theme.colors.placeholder }]} numberOfLines={2}>
+            {infoLabel}
           </Caption>
+          
         </Card.Content>
         <Card.Actions style={styles.actions}>
-          <Button mode="text" onPress={() => handleDismiss(item.itemCode)}>
-            Dismiss
-          </Button>
-          <Button mode="contained" onPress={() => handleAdd(item)}>
-            Add
-          </Button>
+          <IconButton
+            icon="plus-circle-outline"
+            size={30}
+            onPress={() => handleAdd(item)}
+            color={theme.colors.primary}
+          />
         </Card.Actions>
       </Card>
     )
@@ -80,12 +106,12 @@ export default function RecommendationsScreen({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={recs}
-        keyExtractor={(item,index) => `${item.itemCode}_${index}`}
+        keyExtractor={(item, index) => `${item.itemCode}_${index}`}
         renderItem={renderRec}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ padding: 8, paddingBottom: insets.bottom + 60 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations right now.</Text>
+          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations available.</Text>
         }
       />
     </SafeAreaView>
@@ -93,12 +119,15 @@ export default function RecommendationsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#fafafa' },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { marginBottom: 16, borderRadius: 12, elevation: 4, overflow: 'hidden' },
-  cardCover: { height: 150, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-  title: { fontSize: 18, marginBottom: 4 },
-  paragraph: { marginBottom: 4 },
-  actions: { justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: 16 },
-  emptyText: { textAlign: 'center', marginTop: 32 }
+  card: { marginVertical: 6, marginHorizontal: 12, borderRadius: 10, elevation: 2, overflow: 'hidden' },
+  cardCover: { height: 120, backgroundColor: '#e0e0e0' },
+  content: { paddingVertical: 6, paddingHorizontal: 12 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title: { flex: 1, fontSize: 16, fontWeight: '600', marginRight: 4 },
+  paragraph: { fontSize: 12, marginBottom: 4 },
+  caption: { fontSize: 12, marginBottom: 2 },
+    actions: { justifyContent: 'flex-end', paddingRight: 12, paddingBottom: 8 },
+  emptyText: { textAlign: 'center', marginTop: 24, fontSize: 14 }
 })
