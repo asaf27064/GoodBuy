@@ -16,7 +16,7 @@ async function main() {
     const toCreate = 100 - users.length
     const newUsers = []
     for (let i = 0; i < toCreate; i++) {
-      const plain = faker.internet.password()
+      const plain = 'Password@123'
       const hash  = await bcrypt.hash(plain, 10)
       newUsers.push({
         email:        faker.internet.email(),
