@@ -1,36 +1,44 @@
 const RecommendationService = require('../services/recommendationService')
-const ShoppingList           = require('../models/shoppingListModel')
-const Purchase               = require('../models/purchaseModel')
+const ShoppingListModel    = require('../models/shoppingListModel')
+const PurchaseModel        = require('../models/purchaseModel')
 
 exports.getRecs = async (req, res) => {
   try {
     const userId = req.user.id
     const listId = req.query.listId
-    const list   = await ShoppingList.findById(listId)
+
+    // Fetch the shopping list
+    const list = await ShoppingListModel.findById(listId)
     if (!list) return res.status(404).json({ error: 'List not found' })
 
-    const history = await Purchase.find({ purchasedBy: userId })
-    const recs = RecommendationService.recommend(
+    // Fetch user's purchase history
+    const history = await PurchaseModel.find({ purchasedBy: userId })
+
+    // Compute recommendations
+    const recs = await RecommendationService.recommend(
       userId,
       list.products,
       history,
       5
     )
-    // Enrich each recommendation with product details (name, image) from the embedded history:
+
+    // Enrich with product metadata (name, image)
     const detailed = recs.map(r => {
-      // find one example product in history to grab its metadata
+      // Find a sample purchase to retrieve product metadata
       const match = history
         .flatMap(b => b.products)
         .find(p => p.product.itemCode === r.itemCode)
+
       return {
         ...r,
-        name:  match.product.name,
-        image: match.product.image
+        name:  match?.product.name  || '',
+        image: match?.product.image || ''
       }
     })
-    res.json(detailed)
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: err.message })
+
+    return res.json(detailed)
+  } catch (error) {
+    console.error('Recommendation error:', error)
+    return res.status(500).json({ error: error.message })
   }
 }

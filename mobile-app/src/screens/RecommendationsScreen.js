@@ -15,7 +15,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const { data } = await axios.get(
           `/api/Recommendations?listId=${listObj._id}`
@@ -61,7 +61,11 @@ export default function RecommendationsScreen({ route, navigation }) {
               ? `Weekly habit: typically on ${weekdayName}`
               : item.method === 'co-occurrence'
               ? 'Often bought with items in your list'
-              : 'Based on your purchase history'}
+              : item.method === 'personal'
+              ? 'Based on your purchase history'
+              : item.method === 'novelty'
+              ? 'Try something new'
+              : ''}
           </Caption>
         </Card.Content>
         <Card.Actions style={styles.actions}>
