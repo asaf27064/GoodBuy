@@ -16,7 +16,7 @@ async function main() {
     const toCreate = 100 - users.length
     const newUsers = []
     for (let i = 0; i < toCreate; i++) {
-      const plain = faker.internet.password()
+      const plain = 'Password@123'
       const hash  = await bcrypt.hash(plain, 10)
       newUsers.push({
         email:        faker.internet.email(),
@@ -34,14 +34,26 @@ async function main() {
     process.exit(1)
   }
 
-  // Generate 50 baskets per user
+  // Generate 50 baskets per user with weekly habit patterns
   const basketsPerUser = 50
-  const totalUsers     = users.length
   const purchases      = []
+  const now            = new Date()
 
-  for (let u = 0; u < totalUsers; u++) {
-    const user = users[u]
+  for (const user of users) {
+    // Pick 1-3 habit products per user
+    const habitCount = faker.number.int({ min: 1, max: 3 })
+    const habitItems = faker.helpers.shuffle(products)
+      .slice(0, habitCount)
+      .map(p => p._id)
+
     for (let b = 0; b < basketsPerUser; b++) {
+      // Determine basket date as b weeks ago plus small jitter (-1 to +1 days)
+      const basketDate = new Date(now)
+      basketDate.setDate(now.getDate() - b * 7)
+      const jitter = faker.number.int({ min: -1, max: 1 })
+      basketDate.setDate(basketDate.getDate() + jitter)
+
+      // Pick random items 5-15
       const count = faker.number.int({ min: 5, max: 15 })
       const picked = faker.helpers.shuffle(products).slice(0, count)
       const items = picked.map(p => ({
@@ -54,9 +66,27 @@ async function main() {
         numUnits: faker.number.int({ min: 1, max: 4 })
       }))
 
+      // Ensure habit items appear in each weekly basket
+      habitItems.forEach(hid => {
+        if (!items.some(i => i.product.itemCode.toString() === hid.toString())) {
+          const prod = products.find(p => p._id.toString() === hid.toString())
+          if (prod) {
+            items.push({
+              product: {
+                itemCode: prod._id,
+                name:     prod.name,
+                image:    prod.image,
+                numUnits: 1
+              },
+              numUnits: 1
+            })
+          }
+        }
+      })
+
       purchases.push({
         listId:      new mongoose.Types.ObjectId(),
-        timeStamp:   faker.date.past({ years: 1 }),
+        timeStamp:   basketDate,
         purchasedBy: user._id,
         products:    items
       })
