@@ -10,7 +10,7 @@ const bcrypt   = require('bcrypt')
 async function main() {
   await mongoose.connect(process.env.MONGO_URI)
 
-  // 1) Ensure 100 users exist
+  // Ensure 100 users exist
   let users = await User.find().limit(100)
   if (users.length < 100) {
     const toCreate = 100 - users.length
@@ -27,14 +27,14 @@ async function main() {
     users = users.concat(await User.insertMany(newUsers))
   }
 
-  // 2) Load product catalog
+  // Load product catalog
   const products = await Product.find()
   if (!products.length) {
     console.error('No products in DB—please seed products first.')
     process.exit(1)
   }
 
-  // 3) Generate 50 baskets per user
+  // Generate 50 baskets per user
   const basketsPerUser = 50
   const totalUsers     = users.length
   const purchases      = []
@@ -63,7 +63,6 @@ async function main() {
     }
   }
 
-  // 4) Bulk insert
   await Purchase.insertMany(purchases)
   console.log(`Inserted ${purchases.length} synthetic purchases.`)
   process.exit(0)
