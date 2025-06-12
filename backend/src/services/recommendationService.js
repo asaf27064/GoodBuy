@@ -1,13 +1,11 @@
+
 const PurchaseModel = require('../models/purchaseModel')
-const ProductModel  = require('../models/productModel')
 
 /**
- * Weighted recommendation:
+ * Weighted-blend recommender:
  * - Habit (weekly purchase patterns)
  * - Co-occurrence (items bought together)
- * - Personal recency-frequency
- * - Novelty (new items user hasn't tried)
- * - Global popularity boost applied pre-merge
+ * - Personal frequency
  */
 module.exports = {
   recommend: async (userId, currentProducts, purchaseHistory, topN = 5) => {
@@ -39,10 +37,15 @@ module.exports = {
       })
     })
     const habitCandidates = Object.entries(weekdayCounts)
-      .filter(([code, counts]) => !currentCodes.has(code) && (counts[todayWd] || 0) >= minHabits)
-      .map(([code, counts]) => ({ code, score: counts[todayWd] * 10 + (userScores[code] || 0) }))
+      .filter(([code, counts]) =>
+        !currentCodes.has(code) && (counts[todayWd] || 0) >= minHabits
+      )
+      .map(([code, counts]) => ({
+        code,
+        score: counts[todayWd] * 10 + (userScores[code] || 0)
+      }))
 
-    // Co-occurrence candidates
+    // 3) Co-occurrence 
     const coCounts = {}
     purchaseHistory.forEach(basket => {
       const codes = basket.products.map(p => p.product.itemCode)
@@ -54,49 +57,48 @@ module.exports = {
     const α = 0.5
     let coCandidates = Object.entries(coCounts)
       .filter(([code]) => !currentCodes.has(code))
-      .map(([code, co]) => ({ code, score: co * (1 + α * (userScores[code] || 0)) }))
+      .map(([code, co]) => ({
+        code,
+        score: co * (1 + α * (userScores[code] || 0))
+      }))
 
-    // Personal candidates
+    // 4) Personal candidates
     let personalCandidates = Object.entries(userScores)
       .filter(([code]) => !currentCodes.has(code))
       .map(([code, uf]) => ({ code, score: uf }))
 
-    // Global popularity boost
+    // 5) Global popularity boost
     const globalAgg = await PurchaseModel.aggregate([
       { $unwind: '$products' },
       { $group: { _id: '$products.product.itemCode', count: { $sum: 1 } } }
     ])
     const maxCount = Math.max(...globalAgg.map(g => g.count), 1)
-    const globalCounts = Object.fromEntries(globalAgg.map(g => [g._id, g.count]))
+    const globalCounts = Object.fromEntries(
+      globalAgg.map(g => [g._id, g.count])
+    )
     const boostRatio = 0.05
     const boostList = list =>
       list.map(item => ({
         ...item,
-        score: item.score + ((globalCounts[item.code] || 0) / maxCount) * boostRatio * item.score
+        score:
+          item.score +
+          ((globalCounts[item.code] || 0) / maxCount) * boostRatio * item.score
       }))
     coCandidates = boostList(coCandidates)
     personalCandidates = boostList(personalCandidates)
 
-    // Catalog-validated novelty candidates
-    const catalogDocs = await ProductModel.find({}, 'itemCode').lean()
-    const catalogSet = new Set(catalogDocs.map(p => p.itemCode))
-    const noveltyCandidates = Array.from(catalogSet)
-      .filter(code => !userScores[code] && !currentCodes.has(code))
-      .map(code => ({ code, score: (globalCounts[code] || 0) }))
-
-    // Weighted-blend merge
-    const weights = { habit: 0.4, co: 0.3, personal: 0.2, novelty: 0.1 }
+    // 6) Weighted-blend merge
+    const weights = { habit: 0.4, co: 0.3, personal: 0.3 }
     const pools = {
-      habit: habitCandidates.slice().sort((a,b) => b.score - a.score),
-      co:    coCandidates.slice().sort((a,b) => b.score - a.score),
-      personal: personalCandidates.slice().sort((a,b) => b.score - a.score),
-      novelty: noveltyCandidates
+      habit: habitCandidates.slice().sort((a, b) => b.score - a.score),
+      co: coCandidates.slice().sort((a, b) => b.score - a.score),
+      personal: personalCandidates.slice().sort((a, b) => b.score - a.score)
     }
 
     function pickMethod() {
       const r = Math.random()
       let sum = 0
-      for (const m of ['habit','co','personal','novelty']) {
+      for (const m of ['habit', 'co', 'personal']) {
         sum += weights[m]
         if (r <= sum) return m
       }
@@ -109,35 +111,30 @@ module.exports = {
       const method = pickMethod()
       const pool = pools[method]
       let candidate = null
-      if (method === 'novelty') {
-        if (pool.length) {
-          const idx = Math.floor(Math.random() * pool.length)
-          candidate = pool.splice(idx,1)[0]
-        }
-      } else {
-        while (pool.length) {
-          const top = pool.shift()
-          if (!used.has(top.code)) {
-            candidate = top
-            break
-          }
+      while (pool.length) {
+        const top = pool.shift()
+        if (!used.has(top.code)) {
+          candidate = top
+          break
         }
       }
       if (candidate) {
         used.add(candidate.code)
         result.push({ ...candidate, method })
-      } else if (Object.values(pools).every(pl => pl.length === 0)) {
-        break
+      } else {
+        if (Object.values(pools).every(pl => pl.length === 0)) break
       }
     }
 
-    // 8) Format output
+    // 7) Format output
     return result.map(({ code, score, method }) => {
       const dates = purchaseHistory
-        .filter(b => b.products.some(p => p.product.itemCode === code))
+        .filter(b =>
+          b.products.some(p => p.product.itemCode === code)
+        )
         .map(b => new Date(b.timeStamp).getTime())
       return {
-        itemCode:      code,
+        itemCode: code,
         score,
         method,
         lastPurchased: dates.length ? Math.max(...dates) : null

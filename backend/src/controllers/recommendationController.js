@@ -1,3 +1,4 @@
+
 const RecommendationService = require('../services/recommendationService')
 const ShoppingList          = require('../models/shoppingListModel')
 const Purchase              = require('../models/purchaseModel')
@@ -8,14 +9,14 @@ exports.getRecs = async (req, res) => {
     const userId = req.user.id
     const listId = req.query.listId
 
-    // Load the shopping list
+    //Load the shopping list
     const list = await ShoppingList.findById(listId)
     if (!list) return res.status(404).json({ error: 'List not found' })
 
-    // Load user purchase history
+    //Load user's purchase history
     const history = await Purchase.find({ purchasedBy: userId })
 
-    // Compute recommendations
+    //Compute recommendations
     const recs = await RecommendationService.recommend(
       userId,
       list.products,
@@ -23,17 +24,17 @@ exports.getRecs = async (req, res) => {
       5
     )
 
-    // Bulk-fetch product metadata
+    //Bulk-fetch product metadata
     const codes    = recs.map(r => r.itemCode)
     const prodDocs = await Product.find({ itemCode: { $in: codes } }).lean()
     const prodMap  = Object.fromEntries(prodDocs.map(p => [p.itemCode, p]))
 
-    // respond
+    //Enrich and respond
     const detailed = recs.map(r => {
       const match = history
         .flatMap(b => b.products)
         .find(p => p.product.itemCode === r.itemCode)
-      const meta  = prodMap[r.itemCode] || {}
+      const meta = prodMap[r.itemCode] || {}
       return {
         itemCode:      r.itemCode,
         score:         r.score,
