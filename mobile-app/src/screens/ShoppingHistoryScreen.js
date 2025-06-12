@@ -22,7 +22,7 @@ export default function ShoppingHistoryScreen() {
     if (!user?.id) return
 
     axios
-      .get(`/api/Purchases/${user.id}`)
+      .get(`/api/Purchases/history`)
       .then(({ data }) => setHistory(Array.isArray(data) ? data : []))
       .catch(err => {
         console.error('Error fetching purchase history:', err)

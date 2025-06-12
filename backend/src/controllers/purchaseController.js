@@ -43,3 +43,9 @@ exports.createPurchase = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+
+exports.getHistory = async (req, res) => {
+  const userId = req.user.id
+  const history = await Purchase.find({ purchasedBy: userId }).sort('-timeStamp')
+  res.json(history)
+}

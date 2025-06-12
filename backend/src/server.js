@@ -62,12 +62,15 @@ const shoppingListRoutes = require('./routes/shoppingListRoutes')
 const storeRoutes = require('./routes/storeRoutes')
 const productRoutes = require('./routes/productRoutes')
 const purchaseRoutes = require('./routes/purchaseRoutes')
+const recommendationRoutes = require('./routes/recommendationRoutes')
 
 app.use('/api/Users', userRoutes);
 app.use('/api/ShoppingLists', shoppingListRoutes);
 app.use('/api/Stores', storeRoutes);
 app.use('/api/Products', productRoutes);
 app.use('/api/Purchases', purchaseRoutes);
+app.use('/api/Recommendations', recommendationRoutes);
+
 
 
 const authRoutes = require('./routes/auth')
