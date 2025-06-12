@@ -37,28 +37,44 @@ export default function RecommendationsScreen({ route, navigation }) {
     setRecs(r => r.filter(r => r.itemCode !== itemCode))
   }
 
-  const renderRec = ({ item }) => (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
-      {item.image && <Card.Cover source={{ uri: item.image }} />}
-      <Card.Content>
-        <Title>{item.name}</Title>
-        <Paragraph>
-          Last bought: {item.lastPurchased ? new Date(item.lastPurchased).toLocaleDateString() : 'Never'}
-        </Paragraph>
-        <Caption style={{ color: theme.colors.placeholder }}>
-          {item.method === 'habit'
-            ? 'Your weekly habit for this item'
-            : item.method === 'co-occurrence'
-            ? 'Frequently bought with items in your list'
-            : 'Based on your past purchases'}
-        </Caption>
-      </Card.Content>
-      <Card.Actions>
-        <Button onPress={() => handleDismiss(item.itemCode)}>Dismiss</Button>
-        <Button onPress={() => handleAdd(item)}>Add</Button>
-      </Card.Actions>
-    </Card>
-  )
+  const renderRec = ({ item }) => {
+    const lastDate = item.lastPurchased ? new Date(item.lastPurchased) : null
+    const weekdayName = lastDate
+      ? lastDate.toLocaleDateString(undefined, { weekday: 'long' })
+      : ''
+
+    return (
+      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
+        {item.image && (
+          <Card.Cover
+            source={{ uri: item.image }}
+            style={styles.cardCover}
+          />
+        )}
+        <Card.Content>
+          <Title style={styles.title}>{item.name}</Title>
+          <Paragraph style={styles.paragraph}>
+            Last bought: {lastDate ? lastDate.toLocaleDateString() : 'Never'}
+          </Paragraph>
+          <Caption style={{ color: theme.colors.placeholder }}>
+            {item.method === 'habit'
+              ? `Weekly habit: typically on ${weekdayName}`
+              : item.method === 'co-occurrence'
+              ? 'Often bought with items in your list'
+              : 'Based on your purchase history'}
+          </Caption>
+        </Card.Content>
+        <Card.Actions style={styles.actions}>
+          <Button mode="text" onPress={() => handleDismiss(item.itemCode)}>
+            Dismiss
+          </Button>
+          <Button mode="contained" onPress={() => handleAdd(item)}>
+            Add
+          </Button>
+        </Card.Actions>
+      </Card>
+    )
+  }
 
   if (loading) {
     return (
@@ -74,7 +90,11 @@ export default function RecommendationsScreen({ route, navigation }) {
         data={recs}
         keyExtractor={r => r.itemCode}
         renderItem={renderRec}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: insets.bottom + 100
+        }}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations right now.</Text>
         }
@@ -86,6 +106,28 @@ export default function RecommendationsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { marginBottom: 12 },
+  card: {
+    marginBottom: 16,
+    borderRadius: 12,
+    elevation: 4,
+    overflow: 'hidden'
+  },
+  cardCover: {
+    height: 150,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0
+  },
+  title: {
+    fontSize: 18,
+    marginBottom: 4
+  },
+  paragraph: {
+    marginBottom: 4
+  },
+  actions: {
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingBottom: 16
+  },
   emptyText: { textAlign: 'center', marginTop: 32 }
 })
