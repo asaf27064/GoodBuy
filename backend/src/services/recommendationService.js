@@ -1,10 +1,8 @@
-// backend/src/services/recommendationService.js
-
 const PurchaseModel = require('../models/purchaseModel')
 const ProductModel  = require('../models/productModel')
 
 /**
- * Weighted-blend recommender with catalog-validated novelty:
+ * Weighted recommendation:
  * - Habit (weekly purchase patterns)
  * - Co-occurrence (items bought together)
  * - Personal recency-frequency
@@ -44,7 +42,7 @@ module.exports = {
       .filter(([code, counts]) => !currentCodes.has(code) && (counts[todayWd] || 0) >= minHabits)
       .map(([code, counts]) => ({ code, score: counts[todayWd] * 10 + (userScores[code] || 0) }))
 
-    // 3) Co-occurrence candidates
+    // Co-occurrence candidates
     const coCounts = {}
     purchaseHistory.forEach(basket => {
       const codes = basket.products.map(p => p.product.itemCode)
@@ -58,12 +56,12 @@ module.exports = {
       .filter(([code]) => !currentCodes.has(code))
       .map(([code, co]) => ({ code, score: co * (1 + α * (userScores[code] || 0)) }))
 
-    // 4) Personal candidates
+    // Personal candidates
     let personalCandidates = Object.entries(userScores)
       .filter(([code]) => !currentCodes.has(code))
       .map(([code, uf]) => ({ code, score: uf }))
 
-    // 5) Global popularity boost
+    // Global popularity boost
     const globalAgg = await PurchaseModel.aggregate([
       { $unwind: '$products' },
       { $group: { _id: '$products.product.itemCode', count: { $sum: 1 } } }
@@ -79,14 +77,14 @@ module.exports = {
     coCandidates = boostList(coCandidates)
     personalCandidates = boostList(personalCandidates)
 
-    // 6) Catalog-validated novelty candidates
+    // Catalog-validated novelty candidates
     const catalogDocs = await ProductModel.find({}, 'itemCode').lean()
     const catalogSet = new Set(catalogDocs.map(p => p.itemCode))
     const noveltyCandidates = Array.from(catalogSet)
       .filter(code => !userScores[code] && !currentCodes.has(code))
       .map(code => ({ code, score: (globalCounts[code] || 0) }))
 
-    // 7) Weighted-blend merge
+    // Weighted-blend merge
     const weights = { habit: 0.4, co: 0.3, personal: 0.2, novelty: 0.1 }
     const pools = {
       habit: habitCandidates.slice().sort((a,b) => b.score - a.score),

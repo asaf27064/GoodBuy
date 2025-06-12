@@ -1,5 +1,3 @@
-// backend/src/controllers/recommendationController.js
-
 const RecommendationService = require('../services/recommendationService')
 const ShoppingList          = require('../models/shoppingListModel')
 const Purchase              = require('../models/purchaseModel')
@@ -14,7 +12,7 @@ exports.getRecs = async (req, res) => {
     const list = await ShoppingList.findById(listId)
     if (!list) return res.status(404).json({ error: 'List not found' })
 
-    // Load user's purchase history
+    // Load user purchase history
     const history = await Purchase.find({ purchasedBy: userId })
 
     // Compute recommendations
