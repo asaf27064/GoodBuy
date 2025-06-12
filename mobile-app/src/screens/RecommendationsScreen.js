@@ -29,13 +29,8 @@ export default function RecommendationsScreen({ route, navigation }) {
     })()
   }, [listObj._id])
 
-  const handleAdd = item => {
-    navigation.navigate('EditItems', { addedItem: item, listObj })
-  }
-
-  const handleDismiss = itemCode => {
-    setRecs(r => r.filter(r => r.itemCode !== itemCode))
-  }
+  const handleAdd = item => navigation.navigate('EditItems', { addedItem: item, listObj })
+  const handleDismiss = code => setRecs(prev => prev.filter(r => r.itemCode !== code))
 
   const renderRec = ({ item }) => {
     const lastDate = item.lastPurchased ? new Date(item.lastPurchased) : null
@@ -46,10 +41,7 @@ export default function RecommendationsScreen({ route, navigation }) {
     return (
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
         {item.image && (
-          <Card.Cover
-            source={{ uri: item.image }}
-            style={styles.cardCover}
-          />
+          <Card.Cover source={{ uri: item.image }} style={styles.cardCover} />
         )}
         <Card.Content>
           <Title style={styles.title}>{item.name}</Title>
@@ -63,9 +55,7 @@ export default function RecommendationsScreen({ route, navigation }) {
               ? 'Often bought with items in your list'
               : item.method === 'personal'
               ? 'Based on your purchase history'
-              : item.method === 'novelty'
-              ? 'Try something new'
-              : ''}
+              : 'Surprise! Try something new'}
           </Caption>
         </Card.Content>
         <Card.Actions style={styles.actions}>
@@ -80,24 +70,19 @@ export default function RecommendationsScreen({ route, navigation }) {
     )
   }
 
-  if (loading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    )
-  }
+  if (loading) return (
+    <View style={styles.loader}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+    </View>
+  )
 
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
         data={recs}
-        keyExtractor={r => r.itemCode}
+        keyExtractor={(item,index) => `${item.itemCode}_${index}`}
         renderItem={renderRec}
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: insets.bottom + 100
-        }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations right now.</Text>
@@ -110,28 +95,10 @@ export default function RecommendationsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: {
-    marginBottom: 16,
-    borderRadius: 12,
-    elevation: 4,
-    overflow: 'hidden'
-  },
-  cardCover: {
-    height: 150,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0
-  },
-  title: {
-    fontSize: 18,
-    marginBottom: 4
-  },
-  paragraph: {
-    marginBottom: 4
-  },
-  actions: {
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingBottom: 16
-  },
+  card: { marginBottom: 16, borderRadius: 12, elevation: 4, overflow: 'hidden' },
+  cardCover: { height: 150, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  title: { fontSize: 18, marginBottom: 4 },
+  paragraph: { marginBottom: 4 },
+  actions: { justifyContent: 'flex-end', paddingHorizontal: 16, paddingBottom: 16 },
   emptyText: { textAlign: 'center', marginTop: 32 }
 })
