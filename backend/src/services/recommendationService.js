@@ -1,92 +1,86 @@
-// mobile-app/src/screens/RecommendationsScreen.js
+// backend/src/services/recommendationService.js
 
-import React, { useState, useEffect } from 'react'
-import { SafeAreaView, FlatList, Text, View, ActivityIndicator, StyleSheet } from 'react-native'
-import { useTheme, Card, Title, Paragraph, Button, Caption } from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import axios from 'axios'
-import { useAuth } from '../contexts/AuthContext'
+module.exports = {
+  recommend: (userId, currentProducts, purchaseHistory, topN = 5) => {
+    const now = new Date()
+    const todayWeekday = now.getDay()     // 0=Sunday…6=Saturday
+    const currentCodes = new Set(currentProducts.map(p => p.product.itemCode))
 
-export default function RecommendationsScreen({ route, navigation }) {
-  const theme = useTheme()
-  const insets = useSafeAreaInsets()
-  const { user } = useAuth()
-  const { listObj } = route.params
-
-  const [recs, setRecs] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const { data } = await axios.get(
-          `/api/Recommendations?listId=${listObj._id}`
-        )
-        setRecs(data)
-      } catch (err) {
-        console.error('Error fetching recommendations:', err)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [listObj._id])
-
-  const handleAdd = item => {
-    navigation.navigate('EditItems', {
-      addedItem: item,
-      listObj
+    // 1) Compute recency-frequency scores
+    const λ = 0.000001
+    const userScores = {}
+    purchaseHistory.forEach(basket => {
+      const age = now - new Date(basket.timeStamp).getTime()
+      const decay = Math.exp(-λ * age)
+      basket.products.forEach(({ product, numUnits }) => {
+        const code = product.itemCode
+        userScores[code] = (userScores[code] || 0) + decay * numUnits
+      })
     })
-  }
 
-  const handleDismiss = itemCode => {
-    setRecs(r => r.filter(r => r.itemCode !== itemCode))
-  }
+    // 2) Detect weekly habits
+    const minHabits = 4
+    const weekdayCounts = {}
+    purchaseHistory.forEach(basket => {
+      const wd = new Date(basket.timeStamp).getDay()
+      basket.products.forEach(({ product }) => {
+        const code = product.itemCode
+        weekdayCounts[code] = weekdayCounts[code] || {}
+        weekdayCounts[code][wd] = (weekdayCounts[code][wd] || 0) + 1
+      })
+    })
 
-  const renderRec = ({ item }) => (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
-      {item.image && <Card.Cover source={{ uri: item.image }} />}
-      <Card.Content>
-        <Title>{item.name}</Title>
-        <Paragraph>Last bought: {item.lastPurchased ? new Date(item.lastPurchased).toLocaleDateString() : 'Never'}</Paragraph>
-        <Caption style={{ color: theme.colors.placeholder }}>
-          {item.method === 'co-occurrence'
-            ? 'Frequently bought with items in your list'
-            : 'Based on your past purchases'}
-        </Caption>
-      </Card.Content>
-      <Card.Actions>
-        <Button onPress={() => handleDismiss(item.itemCode)}>Dismiss</Button>
-        <Button onPress={() => handleAdd(item)}>Add</Button>
-      </Card.Actions>
-    </Card>
-  )
+    // 3) Habit candidates
+    let candidates = []
+    for (const [code, counts] of Object.entries(weekdayCounts)) {
+      if (currentCodes.has(code)) continue
+      const cnt = counts[todayWeekday] || 0
+      if (cnt >= minHabits) {
+        // boost habits to the top
+        const score = cnt * 10 + (userScores[code] || 0)
+        candidates.push({ code, score, method: 'habit' })
+      }
+    }
 
-  if (loading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    )
-  }
+    // 4) Fallback to co-occurrence
+    if (candidates.length === 0) {
+      const coCounts = {}
+      purchaseHistory.forEach(basket => {
+        const codes = basket.products.map(p => p.product.itemCode)
+        if (!codes.some(c => currentCodes.has(c))) return
+        codes.forEach(c => {
+          if (!currentCodes.has(c)) coCounts[c] = (coCounts[c] || 0) + 1
+        })
+      })
+      const α = 0.5
+      candidates = Object.entries(coCounts).map(([code, co]) => ({
+        code,
+        score: co * (1 + α * (userScores[code] || 0)),
+        method: 'co-occurrence'
+      }))
+    }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={recs}
-        keyExtractor={r => r.itemCode}
-        renderItem={renderRec}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
-        ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations right now.</Text>
+    // 5) Final fallback: personal top
+    if (candidates.length === 0) {
+      candidates = Object.entries(userScores)
+        .filter(([code]) => !currentCodes.has(code))
+        .map(([code, uf]) => ({ code, score: uf, method: 'personal' }))
+    }
+
+    // 6) Sort & top N, attach lastPurchased
+    return candidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN)
+      .map(({ code, score, method }) => {
+        const dates = purchaseHistory
+          .filter(b => b.products.some(p => p.product.itemCode === code))
+          .map(b => new Date(b.timeStamp).getTime())
+        return {
+          itemCode:      code,
+          score,
+          method,
+          lastPurchased: dates.length ? Math.max(...dates) : null
         }
-      />
-    </SafeAreaView>
-  )
+      })
+  }
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { marginBottom: 12 },
-  emptyText: { textAlign: 'center', marginTop: 32 }
-})

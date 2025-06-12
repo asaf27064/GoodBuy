@@ -1,8 +1,6 @@
-// mobile-app/src/screens/RecommendationsScreen.js
-
 import React, { useState, useEffect } from 'react'
 import { SafeAreaView, FlatList, View, Text, ActivityIndicator, StyleSheet } from 'react-native'
-import { useTheme, Card, Title, Paragraph, Button } from 'react-native-paper'
+import { useTheme, Card, Title, Paragraph, Caption, Button } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import axios from 'axios'
 import { useAuth } from '../contexts/AuthContext'
@@ -32,10 +30,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   }, [listObj._id])
 
   const handleAdd = item => {
-    navigation.navigate('EditItems', {
-      addedItem: item,
-      listObj
-    })
+    navigation.navigate('EditItems', { addedItem: item, listObj })
   }
 
   const handleDismiss = itemCode => {
@@ -43,11 +38,20 @@ export default function RecommendationsScreen({ route, navigation }) {
   }
 
   const renderRec = ({ item }) => (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>  
       {item.image && <Card.Cover source={{ uri: item.image }} />}
       <Card.Content>
         <Title>{item.name}</Title>
-        <Paragraph>Last bought: {new Date(item.lastPurchased).toLocaleDateString()}</Paragraph>
+        <Paragraph>
+          Last bought: {item.lastPurchased ? new Date(item.lastPurchased).toLocaleDateString() : 'Never'}
+        </Paragraph>
+        <Caption style={{ color: theme.colors.placeholder }}>
+          {item.method === 'habit'
+            ? 'Your weekly habit for this item'
+            : item.method === 'co-occurrence'
+            ? 'Frequently bought with items in your list'
+            : 'Based on your past purchases'}
+        </Caption>
       </Card.Content>
       <Card.Actions>
         <Button onPress={() => handleDismiss(item.itemCode)}>Dismiss</Button>
@@ -72,9 +76,7 @@ export default function RecommendationsScreen({ route, navigation }) {
         renderItem={renderRec}
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 16 }}
         ListEmptyComponent={
-          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>
-            No recommendations right now.
-          </Text>
+          <Text style={[styles.emptyText, { color: theme.colors.onSurface }]}>No recommendations right now.</Text>
         }
       />
     </SafeAreaView>
