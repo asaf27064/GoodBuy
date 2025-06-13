@@ -10,7 +10,7 @@ const bcrypt   = require('bcrypt');
 async function main() {
   await mongoose.connect(process.env.MONGO_URI);
 
-  // 1) Ensure 100 users exist
+  // 1) make sure 100 users exist
   let users = await User.find().limit(100);
   if (users.length < 100) {
     const toCreate = 100 - users.length;
@@ -27,14 +27,14 @@ async function main() {
     users = users.concat(await User.insertMany(newUsers));
   }
 
-  // 2) Load product catalog
+  // Load product catalog
   const products = await Product.find();
   if (!products.length) {
     console.error('No products in DB—please seed products first.');
     process.exit(1);
   }
 
-  // 3) Create user segments for collaborative filtering realism
+  // Create user segments for collaborative filtering realism
   const segmentCount = 5;
   const segmentSize  = Math.ceil(users.length / segmentCount);
   const segments     = Array.from({ length: segmentCount }, (_, i) =>
@@ -48,7 +48,7 @@ async function main() {
     seg.forEach(uid => { userSegmentMap[uid.toString()] = idx; })
   );
 
-  // 4) Generate synthetic purchases with weekly habits
+  // Generate synthetic purchases with weekly habits
   const basketsPerUser = 50;
   const purchases      = [];
   const now            = new Date();
@@ -113,7 +113,7 @@ async function main() {
     }
   }
 
-  // 5) Bulk insert all purchases
+  // Bulk insert all purchases
   await Purchase.insertMany(purchases);
   console.log(`Inserted ${purchases.length} synthetic purchases.`);
   process.exit(0);

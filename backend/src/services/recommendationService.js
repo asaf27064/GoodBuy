@@ -1,7 +1,7 @@
 const PurchaseModel = require('../models/purchaseModel')
 
 /**
- * Blended, weighted recommender with:
+ * weighted recommender with:
  * 1) Habit detection (weekly patterns)
  * 2) Co-occurrence (items bought together)
  * 3) Personal recency-frequency
