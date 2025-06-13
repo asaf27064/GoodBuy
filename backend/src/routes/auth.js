@@ -1,7 +1,7 @@
 const express = require('express')
 const bcrypt = require('bcrypt')
 const { body, validationResult } = require('express-validator')
-const User = require('../Models/userModel')
+const User = require('../models/userModel')
 const {
   generateAccessToken,
   generateRefreshToken,
