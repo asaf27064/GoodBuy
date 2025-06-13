@@ -16,7 +16,7 @@ module.exports = {
       currentProducts.map(p => p.product.itemCode)
     )
 
-    // 1) Recency-frequency scores
+    // Recency-frequency scores
     const λ = 0.000001
     const userScores = {}
     purchaseHistory.forEach(basket => {
@@ -28,7 +28,7 @@ module.exports = {
       })
     })
 
-    // 2) Habit candidates
+    // Habit candidates
     const minHabits = 4
     const weekdayCounts = {}
     purchaseHistory.forEach(basket => {
@@ -49,7 +49,7 @@ module.exports = {
         method: 'habit'
       }))
 
-    // 3) Co-occurrence candidates
+    // Co-occurrence candidates
     const coCounts = {}
     purchaseHistory.forEach(basket => {
       const codes = basket.products.map(p => p.product.itemCode)
@@ -69,7 +69,7 @@ module.exports = {
         method: 'co-occurrence'
       }))
 
-    // 4) Personal top items
+    // Personal top items
     const personalCandidates = Object.entries(userScores)
       .filter(([code]) => !currentCodes.has(code))
       .map(([code, uf]) => ({
@@ -78,7 +78,7 @@ module.exports = {
         method: 'personal'
       }))
 
-    // 5) Collaborative filtering
+    // Collaborative filtering
     const allPurchases = await PurchaseModel.find().lean()
     const userSet = new Set(
       purchaseHistory.flatMap(b => b.products.map(p => p.product.itemCode))
@@ -113,7 +113,7 @@ module.exports = {
       ([code, score]) => ({ code, score, method: 'cf' })
     )
 
-    // 6) Global popularity boost
+    // Global popularity boost
     const globalAgg = await PurchaseModel.aggregate([
       { $unwind: '$products' },
       {
@@ -141,7 +141,7 @@ module.exports = {
     const boostedCo = boostList(coCandidates)
     const boostedPersonal = boostList(personalCandidates)
 
-    // 7) Pool setup & weighted sampling
+    // Pool setup & weighted sampling
     const pools = {
       habit: habitCandidates.sort((a, b) => b.score - a.score),
       co: boostedCo.sort((a, b) => b.score - a.score),
@@ -198,7 +198,7 @@ module.exports = {
       }
     }
 
-    // 8) Format output
+    // Format output
     return result.map(({ code, score, method }) => {
       const dates = purchaseHistory
         .filter(b =>
