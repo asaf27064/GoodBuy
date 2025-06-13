@@ -2,7 +2,7 @@ const ShoppingList = require('../models/shoppingListModel')
 
 exports.getAllUserShoppingLists = async (req, res) => {
   try {
-    const userId = req.user.sub || req.user._id
+    const userId = (req.user.sub || req.user._id).toString()
     const lists = await ShoppingList.find({ members: userId })
       .populate('members', '-passwordHash')
     return res.json(lists)
@@ -14,9 +14,18 @@ exports.getAllUserShoppingLists = async (req, res) => {
 
 exports.createList = async (req, res) => {
   try {
-    const userId = req.user.sub || req.user._id
+    // Ensure userId is string for deduplication
+    const userId = (req.user.sub || req.user._id).toString()
     const { title, importantList, members } = req.body
-    const allMembers = Array.from(new Set([...(members || []), userId]))
+
+    // Map incoming members to strings and dedupe with creator
+    const incoming = Array.isArray(members)
+      ? members.map(m => m.toString())
+      : []
+    const allMembers = Array.from(
+      new Set([userId, ...incoming])
+    )
+
     const newList = new ShoppingList({
       title,
       importantList,
@@ -35,10 +44,10 @@ exports.createList = async (req, res) => {
 
 exports.getShoppingList = async (req, res) => {
   try {
-    const userId = req.user.sub || req.user._id
+    const userId = (req.user.sub || req.user._id).toString()
     const list = await ShoppingList.findById(req.params.id)
     if (!list) return res.status(404).json({ error: 'List not found' })
-    if (!list.members.map(id => id.toString()).includes(userId.toString())) {
+    if (!list.members.map(id => id.toString()).includes(userId)) {
       return res.status(403).json({ error: 'Not a member of this list' })
     }
     return res.json(list)
@@ -52,10 +61,10 @@ exports.updateListProducts = async (req, res) => {
   console.log('updateListProducts called for list ID:', req.params.id)
   console.log('Payload:', JSON.stringify(req.body, null, 2))
   try {
-    const userId = req.user.sub || req.user._id
+    const userId = (req.user.sub || req.user._id).toString()
     const list = await ShoppingList.findById(req.params.id)
     if (!list) return res.status(404).json({ error: 'List not found' })
-    if (!list.members.map(id => id.toString()).includes(userId.toString())) {
+    if (!list.members.map(id => id.toString()).includes(userId)) {
       return res.status(403).json({ error: 'Not a member of this list' })
     }
 

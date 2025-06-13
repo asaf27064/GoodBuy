@@ -4,6 +4,7 @@ import { SafeAreaView, FlatList, View, Text, TouchableHighlight, Alert } from 'r
 import { useTheme, IconButton } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import ProductListItem from '../components/EditListScreenItem'
+import { useAuth } from '../contexts/AuthContext'
 import { API_BASE } from '../config'
 
 axios.defaults.baseURL = API_BASE
@@ -15,6 +16,7 @@ export default function EditListScreen({ route, navigation }) {
   const [listObj, setListObj] = useState(initialList)
   const [products, setProducts] = useState(initialList.products || [])
   const initialRef = useRef([...initialList.products || []])
+  const { user } = useAuth()
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -45,17 +47,17 @@ export default function EditListScreen({ route, navigation }) {
   }, [route.params?.addedItem])
 
   const diffLog = (oldList, newList) => {
-    const me = 'Me'
+    const CurrentUser = user?.username
     const edits = []
     oldList.forEach(o => {
       const m = newList.find(n => n.product.itemCode === o.product.itemCode)
-      if (!m) edits.push({ product: o.product, action: 'removed', changedBy: me, timeStamp: new Date() })
+      if (!m) edits.push({ product: o.product, action: 'removed', changedBy: CurrentUser, timeStamp: new Date() })
       else if (m.numUnits !== o.numUnits)
-        edits.push({ product: o.product, action: 'updated', changedBy: me, difference: m.numUnits - o.numUnits, timeStamp: new Date() })
+        edits.push({ product: o.product, action: 'updated', changedBy: CurrentUser, difference: m.numUnits - o.numUnits, timeStamp: new Date() })
     })
     newList.forEach(n => {
       if (!oldList.find(o => o.product.itemCode === n.product.itemCode))
-        edits.push({ product: n.product, action: 'added', changedBy: me, timeStamp: new Date() })
+        edits.push({ product: n.product, action: 'added', changedBy: CurrentUser, timeStamp: new Date() })
     })
     return edits
   }
