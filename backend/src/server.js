@@ -52,10 +52,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log(`Client disconnected: ${socket.id}`))
 })
 
-const itemsRoute = require('./routes/Items')
-const historyRoute = require('./routes/History')
-app.use('/items', itemsRoute)
-app.use('/history', historyRoute)
 
 const userRoutes = require('./routes/userRoutes')
 const shoppingListRoutes = require('./routes/shoppingListRoutes')

@@ -1,5 +1,3 @@
-// backend/src/controllers/recommendationController.js
-
 const RecommendationService = require('../services/recommendationService')
 const ShoppingList          = require('../models/shoppingListModel')
 const Purchase              = require('../models/purchaseModel')
