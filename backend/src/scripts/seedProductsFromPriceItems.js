@@ -1,7 +1,7 @@
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose  = require('mongoose')
-const PriceItem = require('../models/priceItem')
+const PriceItem = require('../models/PriceItem')
 const Product   = require('../models/productModel')
 
 async function main() {

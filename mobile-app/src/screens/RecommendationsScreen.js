@@ -1,181 +1,163 @@
-import React, { useState, useEffect } from 'react'
-import {
-  SafeAreaView,
-  FlatList,
-  View,
-  Text,
-  ActivityIndicator,
-  StyleSheet
-} from 'react-native'
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, FlatList, View, StyleSheet } from 'react-native';
 import {
   useTheme,
   Card,
-  Title,
-  Paragraph,
-  Caption,
-  IconButton
-} from 'react-native-paper'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import axios from 'axios'
-import { useAuth } from '../contexts/AuthContext'
+  Button,
+  Text,
+  ActivityIndicator,
+  IconButton,
+} from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function RecommendationsScreen({ route, navigation }) {
-  const theme = useTheme()
-  const insets = useSafeAreaInsets()
-  const { user } = useAuth()
-  const { listObj } = route.params
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { listObj } = route.params;
 
-  const [recs, setRecs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [recs, setRecs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const { data } = await axios.get(
           `/api/Recommendations?listId=${listObj._id}`
-        )
-        setRecs(data)
+        );
+        setRecs(data);
       } catch (err) {
-        console.error('Error fetching recommendations:', err)
+        console.error(err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })()
-  }, [listObj._id])
+    })();
+  }, [listObj._id]);
 
-  const handleAdd = item =>
-    navigation.navigate('EditItems', { addedItem: item, listObj })
-  const handleDismiss = code =>
-    setRecs(prev => prev.filter(r => r.itemCode !== code))
+  const handleAdd = (item) =>
+    navigation.navigate('EditItems', { addedItem: item, listObj });
+  const handleDismiss = (code) =>
+    setRecs((prev) => prev.filter((r) => r.itemCode !== code));
 
-  const renderRec = ({ item }) => {
+  const renderItem = ({ item }) => {
     const lastDate = item.lastPurchased
       ? new Date(item.lastPurchased)
-      : null
-    const infoDate = lastDate
+      : null;
+    const dateText = lastDate
       ? lastDate.toLocaleDateString()
-      : 'Never purchased'
+      : null;
+    const lastLabel = lastDate
+      ? `Last purchased on ${dateText}`
+      : 'Never purchased before';
 
-    let infoLabel = ''
+    let methodLabel = '';
     switch (item.method) {
-      case 'habit': {
-        const weekday = lastDate.toLocaleDateString(undefined, {
-          weekday: 'long'
-        })
-        infoLabel = `Habit: you buy this on ${weekday}`
-        break
-      }
+      case 'habit':
+        methodLabel = lastDate
+          ? `You typically buy this on ${lastDate.toLocaleDateString(undefined, { weekday: 'long' })}`
+          : 'Habit-based recommendation';
+        break;
       case 'co-occurrence':
-        infoLabel = 'Often bought with items in your list'
-        break
+        methodLabel = 'Often bought together with items in your list';
+        break;
       case 'personal':
-        infoLabel = 'Based on your purchase history'
-        break
+        methodLabel = 'Recommended from your past purchases';
+        break;
       case 'cf':
-        infoLabel = 'Popular among similar users'
-        break
+        methodLabel = 'Popular with shoppers like you';
+        break;
       default:
-        infoLabel = ''
+        methodLabel = '';
     }
 
     return (
-      <Card
-        style={[styles.card, { backgroundColor: theme.colors.surface }]}
-      >
-        {item.image && (
-          <Card.Cover
-            source={{ uri: item.image }}
-            style={styles.cardCover}
-            resizeMode="cover"
-          />
-        )}
-        <Card.Content style={styles.content}>
-          <View style={styles.headerRow}>
-            <Title
-              style={[styles.title, { color: theme.colors.text }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Title>
+      <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+        {item.image && <Card.Cover source={{ uri: item.image }} style={styles.cover} />}
+        <Card.Title
+          title={item.name}
+          subtitle={methodLabel}
+          titleNumberOfLines={1}
+          subtitleNumberOfLines={2}
+          titleStyle={{ color: theme.colors.onSurface }}
+          subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
+          right={(props) => (
             <IconButton
+              {...props}
               icon="close"
-              size={20}
               onPress={() => handleDismiss(item.itemCode)}
               color={theme.colors.disabled}
             />
+          )}
+        />
+        <Card.Content>
+          <View style={styles.infoRow}>
+            <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>              
+              {lastLabel}
+            </Text>
+            <Button
+              mode="contained"
+              compact
+              onPress={() => handleAdd(item)}
+              contentStyle={styles.addButtonContent}
+              style={{ backgroundColor: theme.colors.primary }}
+              labelStyle={{ color: theme.colors.onPrimary }}
+            >
+              Add to list
+            </Button>
           </View>
-          <Paragraph style={styles.paragraph} numberOfLines={1}>
-            {infoDate}
-          </Paragraph>
-          <Caption
-            style={[styles.caption, { color: theme.colors.placeholder }]}
-            numberOfLines={2}
-          >
-            {infoLabel}
-          </Caption>
         </Card.Content>
-        <Card.Actions style={styles.actions}>
-          <IconButton
-            icon="plus-circle-outline"
-            size={30}
-            onPress={() => handleAdd(item)}
-            color={theme.colors.primary}
-          />
-        </Card.Actions>
       </Card>
-    )
-  }
+    );
+  };
 
-  if (loading)
+  if (loading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
-    )
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={recs}
-        keyExtractor={(item, index) => `${item.itemCode}_${index}`}
-        renderItem={renderRec}
-        contentContainerStyle={{
-          padding: 8,
-          paddingBottom: insets.bottom + 60
-        }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <Text
-            style={[styles.emptyText, { color: theme.colors.onSurface }]}
-          >
-            No recommendations available.
-          </Text>
-        }
+        keyExtractor={(item) => item.itemCode}
+        renderItem={renderItem}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 60 }]}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 16 }}>
+              No recommendations right now. Try adding items to your list first!
+            </Text>
+          </View>
+        )}
       />
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fafafa' },
+  container: { flex: 1 },
+  list: { padding: 8 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
     marginVertical: 6,
     marginHorizontal: 12,
     borderRadius: 10,
     elevation: 2,
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
-  cardCover: { height: 120, backgroundColor: '#e0e0e0' },
-  content: { paddingVertical: 6, paddingHorizontal: 12 },
-  headerRow: {
+  cover: { height: 120 },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 8,
   },
-  title: { flex: 1, fontSize: 16, fontWeight: '600', marginRight: 4 },
-  paragraph: { fontSize: 12, marginBottom: 4 },
-  caption: { fontSize: 12, marginBottom: 2 },
-  actions: { justifyContent: 'flex-end', paddingRight: 12, paddingBottom: 8 },
-  emptyText: { textAlign: 'center', marginTop: 24, fontSize: 14 }
-})
+  dateText: { fontSize: 12 },
+  addButtonContent: { paddingVertical: 4, paddingHorizontal: 12 },
+  emptyContainer: { marginTop: 40, alignItems: 'center' },
+});
