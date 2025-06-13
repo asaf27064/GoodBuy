@@ -5,6 +5,7 @@ import {
   Card,
   Button,
   Text,
+  Paragraph,
   ActivityIndicator,
   IconButton,
 } from 'react-native-paper';
@@ -15,8 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 export default function RecommendationsScreen({ route, navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
   const { listObj } = route.params;
+  const { user } = useAuth();
 
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const handleAdd = (item) =>
     navigation.navigate('EditItems', { addedItem: item, listObj });
   const handleDismiss = (code) =>
-    setRecs((prev) => prev.filter((r) => r.itemCode !== code));
+    setRecs(prev => prev.filter(r => r.itemCode !== code));
 
   const renderItem = ({ item }) => {
     const lastDate = item.lastPurchased
@@ -68,21 +69,36 @@ export default function RecommendationsScreen({ route, navigation }) {
       case 'cf':
         methodLabel = 'Popular with shoppers like you';
         break;
+      case 'ai':
+        methodLabel = 'Suggested by AI';
+        break;
       default:
         methodLabel = '';
     }
 
     return (
       <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-        {item.image && <Card.Cover source={{ uri: item.image }} style={styles.cover} />}
+        {item.image && (
+          <Card.Cover source={{ uri: item.image }} style={styles.cover} />
+        )}
         <Card.Title
           title={item.name}
           subtitle={methodLabel}
           titleNumberOfLines={1}
-          subtitleNumberOfLines={2}
+          subtitleNumberOfLines={1}
           titleStyle={{ color: theme.colors.onSurface }}
           subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
-          right={(props) => (
+          left={props =>
+            item.method === 'ai' ? (
+              <IconButton
+                {...props}
+                icon="robot"
+                size={20}
+                color={theme.colors.primary}
+              />
+            ) : null
+          }
+          right={props => (
             <IconButton
               {...props}
               icon="close"
@@ -92,8 +108,14 @@ export default function RecommendationsScreen({ route, navigation }) {
           )}
         />
         <Card.Content>
+          {item.method === 'ai' && item.suggestionReason ? (
+            <Paragraph style={[styles.reasonText, { color: theme.colors.onSurfaceVariant }]}>
+              {item.suggestionReason}
+            </Paragraph>
+          ) : null}
+
           <View style={styles.infoRow}>
-            <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>              
+            <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>
               {lastLabel}
             </Text>
             <Button
@@ -124,7 +146,7 @@ export default function RecommendationsScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={recs}
-        keyExtractor={(item) => item.itemCode}
+        keyExtractor={item => item.itemCode}
         renderItem={renderItem}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 60 }]}
         ListEmptyComponent={() => (
@@ -151,6 +173,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cover: { height: 120 },
+  reasonText: {
+    fontStyle: 'italic',
+    marginBottom: 6,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
