@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const pLimit = require('p-limit').default;
+const pLimit = require('p-limit');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { S3Client, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
@@ -31,7 +31,21 @@ const s3 = new S3Client({
   }
 });
 
-const mode = process.argv[2] === 'update' ? 'update' : 'init';
+// -------------------------------------------
+// Script modes:
+//  • init   = scan S3/R2 bucket and mirror found/not_found into MongoDB
+//  • update = process SKUs never seen before; download + upload missing images
+//  • retry  = re-attempt downloads for SKUs previously marked not_found
+// Default mode is 'init' if argument is missing or unrecognized.
+// Usage:
+//   node sync_and_update_images_r2.js init
+//   node sync_and_update_images_r2.js update
+//   node sync_and_update_images_r2.js retry
+// -------------------------------------------
+const arg = process.argv[2];
+const modes = ['init', 'update', 'retry'];
+const mode = modes.includes(arg) ? arg : 'init';
+
 const now = () => new Date().toISOString();
 
 async function listAllR2Images(prefix = 'images/') {
@@ -150,13 +164,22 @@ async function main() {
     console.log(`[${now()}] 🏁 INIT completed — MongoDB now fully synced to R2 & PriceItem`);
   }
 
-  if (mode === 'update') {
-    const seenCodes = await ItemImage.distinct('itemCode');
-    const missing = allCodes.filter(code => !seenCodes.includes(code));
+  if (mode === 'update' || mode === 'retry') {
+    let toProcess;
+
+    if (mode === 'update') {
+      const seen = await ItemImage.distinct('itemCode');
+      toProcess = allCodes.filter(c => !seen.includes(c));
+    } else {
+      toProcess = await ItemImage
+        .find({ status: 'not_found' })
+        .distinct('itemCode');
+    }
+
     const r2Images = await listAllR2Images();
     const chpLimit = pLimit(CHP_CONCURRENCY);
 
-    await Promise.all(missing.map(sku => chpLimit(async () => {
+    await Promise.all(toProcess.map(sku => chpLimit(async () => {
       const Key = `images/${sku}.png`;
       const imageUrl = `${PUBLIC_DEV_URL}/images/${sku}.png`;
 
@@ -193,7 +216,7 @@ async function main() {
         }
       }
     })));
-    console.log(`[${now()}] 🏁 UPDATE completed — All new products processed`);
+    console.log(`[${now()}] 🏁 ${mode.toUpperCase()} completed — All new products processed`);
   }
 
   await mongoose.disconnect();
