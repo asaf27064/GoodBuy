@@ -14,11 +14,9 @@ exports.getAllUserShoppingLists = async (req, res) => {
 
 exports.createList = async (req, res) => {
   try {
-    // Ensure userId is string for deduplication
     const userId = (req.user.sub || req.user._id).toString()
     const { title, importantList, members } = req.body
 
-    // Map incoming members to strings and dedupe with creator
     const incoming = Array.isArray(members)
       ? members.map(m => m.toString())
       : []

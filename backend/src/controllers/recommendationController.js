@@ -25,7 +25,6 @@ exports.getRecs = async (req, res) => {
     )
     console.timeEnd('recommendation')
 
-    // Bulk-fetch product metadata by _id
     const codes    = recs.map(r => r.itemCode)
     const prodDocs = await Product.find({
       $or: [
@@ -33,19 +32,15 @@ exports.getRecs = async (req, res) => {
       ]
     }).lean()
 
-    // Key map by the string value of _id (your itemCode)
     const prodMap  = Object.fromEntries(
       prodDocs.map(p => [p._id.toString(), p])
     )
 
-    // Enrich and respond
     const detailed = recs.map(r => {
-      // do we have a match in the user's own history?
       const match = history
         .flatMap(b => b.products)
         .find(p => p.product.itemCode === r.itemCode)
 
-      // look up the catalog entry
       const meta = prodMap[r.itemCode] || {}
 
       return {
@@ -53,9 +48,7 @@ exports.getRecs = async (req, res) => {
         score:         r.score,
         method:        r.method,
         lastPurchased: r.lastPurchased,
-        // prefer history-name, then catalog name, else code
         name:          match?.product.name || meta.name || r.itemCode,
-        // likewise image
         image:         match?.product.image || meta.image || null
       }
     })

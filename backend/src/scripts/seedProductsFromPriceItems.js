@@ -1,7 +1,7 @@
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose  = require('mongoose')
-const PriceItem = require('../models/priceItem')
+const PriceItem = require('../models/PriceItem')
 const Product   = require('../models/productModel')
 
 async function main() {
@@ -19,7 +19,7 @@ async function main() {
     }
   ])
 
-  // 2 Map into Product, with fallback for missing names
+  // Map into Product, with fallback for missing names
   const docs = items.map(i => ({
     _id:      i._id, 
     name:     i.name || i.description || i._id, 
