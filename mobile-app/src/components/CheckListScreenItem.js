@@ -1,29 +1,66 @@
-import React, {useState} from 'react';
-import { View, Text, Button, Image, Touchable, TouchableHighlight, StyleSheet, TextInput} from 'react-native';
-import globalStyles from '../styles/globalStyles';
-import  MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"
-import { COLORS } from '../styles/colors';
-import BouncyCheckbox from "react-native-bouncy-checkbox";
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Card, Checkbox, Text, useTheme } from 'react-native-paper';
 
-const CheckListScreenItem = ({product, checkStatus, handleCheck}) => {
+export default function CheckListScreenItem({ product, checkStatus, handleCheck }) {
+  const theme = useTheme();
 
-    return (
-        <View style={styles.container}>
-            <BouncyCheckbox  fillColor= {COLORS.goodBuyGreen} isChecked={checkStatus} onPress={() => {handleCheck(product);}}/>
-            <Text style={{color: 'white', textDecorationLine: checkStatus ? 'line-through' : 'none'}}> {product.product.name} X{product.numUnits}</Text>
+  return (
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>      
+      <Card.Content style={styles.row}>
+        <Checkbox.Android
+          status={checkStatus ? 'checked' : 'unchecked'}
+          onPress={() => handleCheck(product)}
+          color={theme.colors.primary}
+        />
+        <View style={styles.textContainer}>
+          <Text
+            style={[styles.name, { color: theme.colors.onSurface }, checkStatus && styles.checkedText]}
+            numberOfLines={1}
+          >
+            {product.product.name}
+          </Text>
+          <Text
+            style={[styles.quantity, { color: theme.colors.onSurfaceVariant }, checkStatus && styles.checkedText]}
+          >
+            x{product.numUnits}
+          </Text>
         </View>
-    );
+      </Card.Content>
+    </Card>
+  );
 }
 
 const styles = StyleSheet.create({
-        container: {
-            flexDirection: 'row',
-            padding: 10,
-            margin: 10,
-            borderBottomWidth: 2,
-            borderBottomColor: COLORS.secondaryGray
-        },
-    }
-)
-
-export default CheckListScreenItem;
+  card: {
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 8,
+    elevation: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  textContainer: {
+    flex: 1,
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  quantity: {
+    fontSize: 14,
+    marginLeft: 12,
+  },
+  checkedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
+});
