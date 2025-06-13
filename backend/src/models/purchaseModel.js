@@ -31,4 +31,7 @@ const purchaseSchema = new mongoose.Schema({
   ]
 })
 
+purchaseSchema.index({ purchasedBy: 1, timeStamp: -1 })
+purchaseSchema.index({ 'products.product.itemCode': 1 })
+
 module.exports = mongoose.model('Purchase', purchaseSchema)

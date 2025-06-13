@@ -71,6 +71,11 @@ export default function RecommendationsScreen({ route, navigation }) {
       case 'personal':
         infoLabel = 'Based on your purchase history'
         break
+      case 'cf':
+        infoLabel = 'Popular among similar users'
+        break
+      default:
+        infoLabel = ''
     }
 
     return (

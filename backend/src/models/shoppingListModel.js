@@ -17,4 +17,4 @@ const shoppingListSchema = new Schema({
   editLog: { type: Array, default: [] }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Shopping List', shoppingListSchema);
+module.exports = mongoose.model('ShoppingList', shoppingListSchema);
