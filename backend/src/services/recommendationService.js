@@ -178,10 +178,10 @@ Here is your current shopping list:
 ${currentNames.join(', ')}.
 
 Using both, suggest ${topN} additional grocery item NAMES in Hebrew only.
-For each, include a brief reason in English why it fits your history and/or this list.
+For each, include a brief reason in Hebrew why it fits your history and/or this list.
 Format as a JSON array of objects, e.g.:
 [
-  { "name": "לחם מחמצת", "reason": "Because you buy soups often—this pairs well." },
+  { "name": "name", "reason": "reason" },
   …
 ]
 `;
