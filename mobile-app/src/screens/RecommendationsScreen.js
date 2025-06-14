@@ -84,7 +84,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const getMethodIcon = (method) => {
     switch (method) {
       case 'ai': return 'robot';
-      case 'habit': return 'calendar';
+      case 'habit': return 'calendar-repeat';
       case 'co-occurrence': return 'basket';
       case 'personal': return 'account-circle';
       case 'cf': return 'account-group';
@@ -241,22 +241,20 @@ export default function RecommendationsScreen({ route, navigation }) {
 
             {/* Single Toggle Button */}
             {totalExtra > 0 && (
-              <Button
-                mode={showingExtra ? "contained" : "outlined"}
-                onPress={handleToggleExtra}
-                icon={showingExtra ? "eye-off" : "eye"}
-                style={styles.toggleButton}
-              >
-                {showingExtra 
-                  ? `Hide Extra Ideas (${totalExtra})` 
-                  : `Show More Ideas (${totalExtra})`
-                }
-                {!showingExtra && aiCount > 0 && (
-                  <Badge size={16} style={[styles.aiBadge, { backgroundColor: theme.colors.primary }]}>
-                    {aiCount}
-                  </Badge>
-                )}
-              </Button>
+              <View style={styles.toggleButtonContainer}>
+                <Button
+                  mode={showingExtra ? "contained" : "outlined"}
+                  onPress={handleToggleExtra}
+                  icon={showingExtra ? "eye-off" : "eye"}
+                  style={styles.toggleButton}
+                >
+                  {showingExtra 
+                    ? `Hide Extra Ideas (${totalExtra})` 
+                    : `Show More Ideas (${totalExtra})`
+                  }
+                  {!showingExtra && aiCount > 0 && ` • ${aiCount} AI`}
+                </Button>
+              </View>
             )}
 
             <Text variant="headlineSmall" style={styles.sectionTitle}>
@@ -316,14 +314,11 @@ const styles = StyleSheet.create({
   statIcon: {
     margin: 0,
   },
-  toggleButton: {
+  toggleButtonContainer: {
     marginBottom: 16,
-    position: 'relative',
   },
-  aiBadge: {
-    position: 'absolute',
-    top: -4,
-    right: 8,
+  toggleButton: {
+    // Removed position relative since we're not using badge anymore
   },
   sectionTitle: {
     fontWeight: 'bold',
@@ -364,7 +359,7 @@ const styles = StyleSheet.create({
   },
   extraChip: {
     height: 24,
-    marginLeft: 10,
+    marginLeft: 8,
   },
   reasonContainer: {
     backgroundColor: 'rgba(0,0,0,0.03)',
