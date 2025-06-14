@@ -84,7 +84,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const getMethodIcon = (method) => {
     switch (method) {
       case 'ai': return 'robot';
-      case 'habit': return 'calendar-repeat';
+      case 'habit': return 'calendar';
       case 'co-occurrence': return 'basket';
       case 'personal': return 'account-circle';
       case 'cf': return 'account-group';
@@ -111,7 +111,11 @@ export default function RecommendationsScreen({ route, navigation }) {
 
     let methodLabel = '';
     switch (item.method) {
-      case 'habit': methodLabel = 'Your usual choice'; break;
+      case 'habit': {
+        const todayName = new Date().toLocaleDateString(undefined, { weekday: 'long' });
+        methodLabel = `Your usual choice on ${todayName}`;
+        break;
+      }
       case 'co-occurrence': methodLabel = 'Goes well together'; break;
       case 'personal': methodLabel = 'Based on your history'; break;
       case 'cf': methodLabel = 'Popular with similar users'; break;
@@ -131,6 +135,13 @@ export default function RecommendationsScreen({ route, navigation }) {
 
     return (
       <Card style={cardStyle}>
+        {item.image && (
+          <Card.Cover
+            source={{ uri: item.image }}
+            style={styles.cardCover}
+            resizeMode="cover"
+          />
+        )}
         <Card.Content style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleRow}>
@@ -153,7 +164,7 @@ export default function RecommendationsScreen({ route, navigation }) {
                   mode="outlined" 
                   compact 
                   style={[styles.extraChip, { borderColor: getMethodColor(item.method) }]}
-                  textStyle={{ fontSize: 10, color: getMethodColor(item.method) }}
+                  textStyle={{ lineHeight: 10, fontSize: 10, color: getMethodColor(item.method) }}
                 >
                   Extra
                 </Chip>
@@ -328,6 +339,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
     elevation: 2,
+    overflow: 'hidden',
+  },
+  cardCover: {
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   cardContent: {
     padding: 16,
@@ -360,6 +377,7 @@ const styles = StyleSheet.create({
   extraChip: {
     height: 24,
     marginLeft: 8,
+    
   },
   reasonContainer: {
     backgroundColor: 'rgba(0,0,0,0.03)',
