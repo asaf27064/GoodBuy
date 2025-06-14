@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   IconButton,
   Chip,
-  Divider,
+  Badge,
 } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
@@ -26,8 +26,7 @@ export default function RecommendationsScreen({ route, navigation }) {
   const [supplementaryOther, setSupplementaryOther] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showingAI, setShowingAI] = useState(false);
-  const [showingOther, setShowingOther] = useState(false);
+  const [showingExtra, setShowingExtra] = useState(false);
 
   const fetchRecommendations = async (showAllAI = false) => {
     try {
@@ -35,7 +34,6 @@ export default function RecommendationsScreen({ route, navigation }) {
         `/api/Recommendations?listId=${listObj._id}&showAllAI=${showAllAI}`
       );
       
-      // Handle both old format (array) and new format (object)
       if (Array.isArray(data)) {
         setMainRecs(data);
         setSupplementaryAI([]);
@@ -44,15 +42,9 @@ export default function RecommendationsScreen({ route, navigation }) {
       } else {
         setMainRecs(data.main || []);
         
-        // Debug: Let's see what we're getting
-        console.log('🔍 All supplementary items:', data.supplementaryAI);
-        
         // Separate AI and non-AI supplementary items
         const aiItems = (data.supplementaryAI || []).filter(item => item.method === 'ai');
         const otherItems = (data.supplementaryAI || []).filter(item => item.method !== 'ai');
-        
-        console.log('🤖 AI items:', aiItems.length, aiItems);
-        console.log('🔧 Other items:', otherItems.length, otherItems);
         
         setSupplementaryAI(aiItems);
         setSupplementaryOther(otherItems);
@@ -65,18 +57,13 @@ export default function RecommendationsScreen({ route, navigation }) {
 
   useEffect(() => {
     (async () => {
-      // Always load with showAllAI=true for demo purposes
       await fetchRecommendations(true);
       setLoading(false);
     })();
   }, [listObj._id]);
 
-  const handleShowAI = () => {
-    setShowingAI(!showingAI);
-  };
-
-  const handleShowOther = () => {
-    setShowingOther(!showingOther);
+  const handleToggleExtra = () => {
+    setShowingExtra(!showingExtra);
   };
 
   const handleAdd = (item) =>
@@ -94,107 +81,112 @@ export default function RecommendationsScreen({ route, navigation }) {
     }
   };
 
+  const getMethodIcon = (method) => {
+    switch (method) {
+      case 'ai': return 'robot';
+      case 'habit': return 'calendar';
+      case 'co-occurrence': return 'basket';
+      case 'personal': return 'account-circle';
+      case 'cf': return 'account-group';
+      default: return 'lightbulb-outline';
+    }
+  };
+
+  const getMethodColor = (method) => {
+    switch (method) {
+      case 'ai': return theme.colors.primary;
+      case 'habit': return '#FF9800';
+      case 'co-occurrence': return '#4CAF50';
+      case 'personal': return '#9C27B0';
+      case 'cf': return '#2196F3';
+      default: return theme.colors.outline;
+    }
+  };
+
   const renderItem = ({ item }) => {
-    const lastDate = item.lastPurchased
-      ? new Date(item.lastPurchased)
-      : null;
-    const dateText = lastDate
-      ? lastDate.toLocaleDateString()
-      : null;
+    const lastDate = item.lastPurchased ? new Date(item.lastPurchased) : null;
     const lastLabel = lastDate
-      ? `Last purchased on ${dateText}`
+      ? `Last purchased ${lastDate.toLocaleDateString()}`
       : 'Never purchased before';
 
     let methodLabel = '';
     switch (item.method) {
-      case 'habit':
-        methodLabel = lastDate
-          ? `You typically buy this on ${lastDate.toLocaleDateString(undefined, { weekday: 'long' })}`
-          : 'Habit-based recommendation';
-        break;
-      case 'co-occurrence':
-        methodLabel = 'Often bought together with items in your list';
-        break;
-      case 'personal':
-        methodLabel = 'Recommended from your past purchases';
-        break;
-      case 'cf':
-        methodLabel = 'Popular with shoppers like you';
-        break;
-      case 'ai':
-        methodLabel = 'Suggested by AI';
-        break;
-      default:
-        methodLabel = '';
+      case 'habit': methodLabel = 'Your usual choice'; break;
+      case 'co-occurrence': methodLabel = 'Goes well together'; break;
+      case 'personal': methodLabel = 'Based on your history'; break;
+      case 'cf': methodLabel = 'Popular with similar users'; break;
+      case 'ai': methodLabel = 'AI suggestion'; break;
+      default: methodLabel = 'Recommended';
     }
 
-    const cardStyle = item.isSupplementary 
-      ? [styles.card, styles.supplementaryCard, { backgroundColor: theme.colors.surfaceVariant }]
-      : [styles.card, { backgroundColor: theme.colors.surface }];
+    const cardStyle = [
+      styles.card,
+      { backgroundColor: theme.colors.surface },
+      item.isSupplementary && { 
+        backgroundColor: theme.colors.surfaceVariant,
+        borderLeftWidth: 3,
+        borderLeftColor: getMethodColor(item.method)
+      }
+    ];
 
     return (
       <Card style={cardStyle}>
-        {item.image && (
-          <Card.Cover source={{ uri: item.image }} style={styles.cover} />
-        )}
-        <Card.Title
-          title={item.name}
-          subtitle={methodLabel}
-          titleNumberOfLines={1}
-          subtitleNumberOfLines={1}
-          titleStyle={{ color: theme.colors.onSurface }}
-          subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
-          left={props =>
-            item.method === 'ai' ? (
+        <Card.Content style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.titleRow}>
               <IconButton
-                {...props}
-                icon="robot"
+                icon={getMethodIcon(item.method)}
                 size={20}
-                color={theme.colors.primary}
+                iconColor={getMethodColor(item.method)}
+                style={styles.methodIcon}
               />
-            ) : null
-          }
-          right={props => (
-            <View style={styles.rightActions}>
+              <View style={styles.titleContent}>
+                <Text variant="titleMedium" style={styles.itemTitle}>
+                  {item.name}
+                </Text>
+                <Text variant="bodySmall" style={[styles.methodLabel, { color: theme.colors.onSurfaceVariant }]}>
+                  {methodLabel}
+                </Text>
+              </View>
               {item.isSupplementary && (
                 <Chip 
                   mode="outlined" 
                   compact 
-                  style={styles.supplementaryChip}
-                  textStyle={{ fontSize: 10 }}
+                  style={[styles.extraChip, { borderColor: getMethodColor(item.method) }]}
+                  textStyle={{ fontSize: 10, color: getMethodColor(item.method) }}
                 >
-                  {item.method === 'ai' ? 'AI Extra' : 'Extra'}
+                  Extra
                 </Chip>
               )}
-              <IconButton
-                {...props}
-                icon="close"
-                onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
-                color={theme.colors.disabled}
-              />
+            </View>
+
+            <IconButton
+              icon="close"
+              size={18}
+              onPress={() => handleDismiss(item.itemCode, item.isSupplementary, item.method === 'ai')}
+              iconColor={theme.colors.outline}
+            />
+          </View>
+
+          {item.method === 'ai' && item.suggestionReason && (
+            <View style={styles.reasonContainer}>
+              <Text variant="bodySmall" style={[styles.reasonText, { color: theme.colors.onSurfaceVariant }]}>
+                "{item.suggestionReason}"
+              </Text>
             </View>
           )}
-        />
-        <Card.Content>
-          {item.method === 'ai' && item.suggestionReason ? (
-            <Paragraph style={[styles.reasonText, { color: theme.colors.onSurfaceVariant }]}>
-              {item.suggestionReason}
-            </Paragraph>
-          ) : null}
 
-          <View style={styles.infoRow}>
-            <Text style={[styles.dateText, { color: theme.colors.onSurfaceVariant }]}>
+          <View style={styles.cardFooter}>
+            <Text variant="bodySmall" style={[styles.dateText, { color: theme.colors.outline }]}>
               {lastLabel}
             </Text>
             <Button
               mode="contained"
               compact
               onPress={() => handleAdd(item)}
-              contentStyle={styles.addButtonContent}
-              style={{ backgroundColor: theme.colors.primary }}
-              labelStyle={{ color: theme.colors.onPrimary }}
+              style={styles.addButton}
             >
-              Add to list
+              Add
             </Button>
           </View>
         </Card.Content>
@@ -202,100 +194,22 @@ export default function RecommendationsScreen({ route, navigation }) {
     );
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      {/* Stats Display */}
-      {stats.totalAIGenerated > 0 && (
-        <View style={styles.statsContainer}>
-          <Text style={[styles.statsText, { color: theme.colors.onSurfaceVariant }]}>
-            AI Generated: {stats.totalAIGenerated} suggestions • 
-            Used in main: {stats.aiUsedInMain}
-            {stats.pureAISupplementary > 0 && ` • AI Extra: ${stats.pureAISupplementary}`}
-            {stats.otherMethodsSupplementary > 0 && ` • Other Extra: ${stats.otherMethodsSupplementary}`}
-          </Text>
-        </View>
-      )}
-      
-      {/* AI Toggle Button */}
-      {(supplementaryAI.length > 0 || stats.totalAIGenerated > 0) && (
-        <Button
-          mode={showingAI ? "contained" : "outlined"}
-          onPress={handleShowAI}
-          icon="robot"
-          style={styles.aiButton}
-          contentStyle={styles.aiButtonContent}
-        >
-          {showingAI 
-            ? `Hide AI Extras (${supplementaryAI.length})` 
-            : `Show AI Extras (${supplementaryAI.length})`
-          }
-        </Button>
-      )}
-
-      {/* Other Methods Toggle Button */}
-      {supplementaryOther.length > 0 && (
-        <Button
-          mode={showingOther ? "contained" : "outlined"}
-          onPress={handleShowOther}
-          icon="lightbulb-outline"
-          style={styles.aiButton}
-          contentStyle={styles.aiButtonContent}
-        >
-          {showingOther 
-            ? `Hide Other Ideas (${supplementaryOther.length})` 
-            : `Show Other Ideas (${supplementaryOther.length})`
-          }
-        </Button>
-      )}
-
-      <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
-        Main Recommendations
-      </Text>
-    </View>
-  );
-
-  const renderAISection = () => {
-    if (!showingAI || supplementaryAI.length === 0) return null;
-    
-    return (
-      <View style={styles.aiSection}>
-        <Divider style={styles.divider} />
-        <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
-          Additional AI Suggestions
-        </Text>
-        <Text style={[styles.sectionSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-          More ideas from AI that didn't make the main list
-        </Text>
-      </View>
-    );
-  };
-
-  const renderOtherSection = () => {
-    if (!showingOther || supplementaryOther.length === 0) return null;
-    
-    return (
-      <View style={styles.aiSection}>
-        <Divider style={styles.divider} />
-        <Text style={[styles.sectionTitle, { color: theme.colors.secondary }]}>
-          Other Suggestions
-        </Text>
-        <Text style={[styles.sectionSubtitle, { color: theme.colors.onSurfaceVariant }]}>
-          Additional recommendations from other methods
-        </Text>
-      </View>
-    );
-  };
+  const totalExtra = supplementaryAI.length + supplementaryOther.length;
+  const aiCount = supplementaryAI.length;
+  const otherCount = supplementaryOther.length;
 
   const allData = [
     ...mainRecs,
-    ...(showingAI ? supplementaryAI : []),
-    ...(showingOther ? supplementaryOther : [])
+    ...(showingExtra ? [...supplementaryAI, ...supplementaryOther] : [])
   ];
 
   if (loading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.onSurfaceVariant }]}>
+          Finding the best recommendations...
+        </Text>
       </View>
     );
   }
@@ -306,37 +220,68 @@ export default function RecommendationsScreen({ route, navigation }) {
         data={allData}
         keyExtractor={item => `${item.itemCode}-${item.isSupplementary ? 'supp' : 'main'}`}
         renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={{ color: theme.colors.onSurfaceVariant, fontSize: 16 }}>
-              No recommendations right now. Try adding items to your list first!
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 60 }]}
+        ListHeaderComponent={() => (
+          <View style={styles.header}>
+            {/* Compact Stats */}
+            {stats.totalAIGenerated > 0 && (
+              <View style={styles.compactStats}>
+                <View style={styles.statItem}>
+                  <IconButton icon="robot" size={16} iconColor={theme.colors.primary} style={styles.statIcon} />
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    {stats.totalAIGenerated} AI suggestions
+                  </Text>
+                </View>
+                <Text variant="bodySmall" style={{ color: theme.colors.outline }}>•</Text>
+                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {stats.aiUsedInMain || 0} in main list
+                </Text>
+              </View>
+            )}
+
+            {/* Single Toggle Button */}
+            {totalExtra > 0 && (
+              <Button
+                mode={showingExtra ? "contained" : "outlined"}
+                onPress={handleToggleExtra}
+                icon={showingExtra ? "eye-off" : "eye"}
+                style={styles.toggleButton}
+              >
+                {showingExtra 
+                  ? `Hide Extra Ideas (${totalExtra})` 
+                  : `Show More Ideas (${totalExtra})`
+                }
+                {!showingExtra && aiCount > 0 && (
+                  <Badge size={16} style={[styles.aiBadge, { backgroundColor: theme.colors.primary }]}>
+                    {aiCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+
+            <Text variant="headlineSmall" style={styles.sectionTitle}>
+              {showingExtra && allData.some(item => item.isSupplementary) 
+                ? "All Recommendations" 
+                : "Main Recommendations"
+              }
             </Text>
           </View>
         )}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 60 }]}
-        ItemSeparatorComponent={({ leadingItem, index }) => {
-          if (!leadingItem || leadingItem.isSupplementary) return null;
-          
-          const nextIndex = index + 1;
-          const nextItem = allData[nextIndex];
-          
-          // Show AI section separator before first AI supplementary item
-          if (nextItem && nextItem.isSupplementary && nextItem.method === 'ai' && 
-              showingAI && supplementaryAI.length > 0) {
-            return renderAISection();
-          }
-          
-          // Show Other section separator before first non-AI supplementary item
-          // Only if we're not already in AI section
-          if (nextItem && nextItem.isSupplementary && nextItem.method !== 'ai' && 
-              showingOther && supplementaryOther.length > 0 &&
-              !allData.slice(0, nextIndex).some(item => item.isSupplementary && item.method === 'ai' && showingAI)) {
-            return renderOtherSection();
-          }
-          
-          return null;
-        }}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <IconButton 
+              icon="lightbulb-outline" 
+              size={48} 
+              iconColor={theme.colors.outline}
+            />
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant, textAlign: 'center' }}>
+              No recommendations yet
+            </Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.outline, textAlign: 'center', marginTop: 8 }}>
+              Add some items to your list to get personalized suggestions
+            </Text>
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -344,76 +289,108 @@ export default function RecommendationsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  list: { padding: 8 },
-  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+  list: { padding: 16 },
+  loader: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    gap: 16
   },
-  statsContainer: {
-    marginBottom: 8,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  statsText: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  aiButton: {
-    marginVertical: 8,
-  },
-  aiButtonContent: {
-    paddingVertical: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  loadingText: {
     marginTop: 8,
-    marginBottom: 4,
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    marginBottom: 8,
+  header: {
+    marginBottom: 16,
   },
-  aiSection: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  compactStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 8,
   },
-  divider: {
-    marginVertical: 8,
-  },
-  card: {
-    marginVertical: 6,
-    marginHorizontal: 12,
-    borderRadius: 10,
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  supplementaryCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50', // Green border for AI extras
-  },
-  rightActions: {
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  supplementaryChip: {
-    marginRight: 4,
-    height: 24,
+  statIcon: {
+    margin: 0,
   },
-  cover: { height: 120 },
+  toggleButton: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  aiBadge: {
+    position: 'absolute',
+    top: -4,
+    right: 8,
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  card: {
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  methodIcon: {
+    margin: 0,
+    marginRight: 8,
+  },
+  titleContent: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  methodLabel: {
+    fontSize: 12,
+  },
+  extraChip: {
+    height: 24,
+    marginLeft: 10,
+  },
+  reasonContainer: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
   reasonText: {
     fontStyle: 'italic',
-    marginBottom: 6,
+    lineHeight: 18,
   },
-  infoRow: {
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
   },
-  dateText: { fontSize: 12 },
-  addButtonContent: { paddingVertical: 4, paddingHorizontal: 12 },
-  emptyContainer: { marginTop: 40, alignItems: 'center' },
+  dateText: {
+    fontSize: 11,
+    flex: 1,
+  },
+  addButton: {
+    borderRadius: 20,
+  },
+  emptyContainer: { 
+    marginTop: 60, 
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
 });
