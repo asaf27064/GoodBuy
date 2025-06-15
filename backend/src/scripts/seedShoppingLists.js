@@ -29,8 +29,7 @@ async function main() {
           product: {
             itemCode: p._id,
             name:     p.name,
-            image:    p.image,
-            numUnits: faker.number.int({ min: 1, max: 3 })
+            image:    p.image
           },
           numUnits: faker.number.int({ min: 1, max: 3 })
         }))

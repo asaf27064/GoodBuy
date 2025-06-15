@@ -6,7 +6,7 @@ const aiClient = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Constants for better maintainability
+// Constants
 const CONSTANTS = {
   DECAY_LAMBDA: 0.000001,
   MIN_HABITS: 2,
@@ -16,7 +16,6 @@ const CONSTANTS = {
   AI_TIMEOUT: 10000,
   MIN_AI_SCORE: 1,
   GUARANTEED_METHODS: ['ai', 'co', 'personal', 'cf', 'habit']
-  // No weights - we use method diversity based on scores
 };
 
 /**
@@ -87,7 +86,7 @@ function calculateRecencyFrequencyScores(purchaseHistory, now) {
 }
 
 /**
- * Detects user habits based on weekday patterns - More lenient
+ * Detects user habits based on weekday patterns
  */
 function detectHabits(purchaseHistory, todayWd, currentCodes) {
   const weekdayCounts = {};
@@ -111,7 +110,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
     }
   });
 
-  // More lenient habit detection - include items with pattern on any day if today fails
+  // habit - include items with pattern on any day if today fails
   let candidates = Object.entries(weekdayCounts)
     .filter(([code, counts]) =>
       !currentCodes.has(code) && (counts[todayWd] || 0) >= MIN_HABITS
@@ -145,7 +144,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
 }
 
 /**
- * Finds co-occurrence candidates - More inclusive
+ * Finds co-occurrence candidates
  */
 function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
   const coCounts = {};
@@ -157,7 +156,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
         ?.map(p => p.product?.itemCode)
         .filter(Boolean) || [];
       
-      // More lenient - count if ANY item from current list appears
+      // count if ANY item from current list appears
       if (!codes.some(c => currentCodes.has(c))) return;
 
       codes.forEach(c => {
@@ -175,7 +174,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
     .map(([code, co]) => ({
       code,
       score: co * (1 + CO_OCCURRENCE_ALPHA * (userScores[code] || 0)),
-      method: 'co'  // ✅ FIXED: Consistent with pool key
+      method: 'co'  //
     }));
 }
 
@@ -282,7 +281,7 @@ function applyGlobalBoost(candidates, globalCounts, maxCount) {
 }
 
 /**
- * Gets AI-powered suggestions - real AI only, no fallback
+ * Gets AI suggestions
  */
 async function getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes) {
   if (!process.env.GEMINI_API_KEY) {
@@ -339,7 +338,7 @@ Format as a JSON array of objects, e.g.:
             suggestionReason: reason.trim()
           };
         })
-        .filter(c => c && c.score >= CONSTANTS.MIN_AI_SCORE); // ✅ FIXED: Use MIN_AI_SCORE
+        .filter(c => c && c.score >= CONSTANTS.MIN_AI_SCORE);
 
       console.log(`✅ Gemini AI suggestions: ${aiCandidates.length} items`);
       return aiCandidates;
@@ -348,13 +347,12 @@ Format as a JSON array of objects, e.g.:
     console.warn('Gemini AI failed:', error.message);
   }
 
-  // Return empty if AI fails - no fallback
   console.log('❌ No AI suggestions available');
   return [];
 }
 
 /**
- * Ensures each non-AI method has at least one candidate - Enhanced with safeguards
+ * Ensures each non-AI method has at least one candidate
  */
 function ensureMethodAvailability(pools, globalCounts, currentCodes) {
   const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
@@ -368,7 +366,7 @@ function ensureMethodAvailability(pools, globalCounts, currentCodes) {
     if (!pools[method] || pools[method].length === 0) {
       console.log(`🔧 Generating fallback for method: ${method}`);
       
-      // Take different slices for variety, but ensure we don't go beyond available items
+      // Take different slices for variety
       let slice, methodName;
       switch (method) {
         case 'personal':
@@ -377,7 +375,7 @@ function ensureMethodAvailability(pools, globalCounts, currentCodes) {
           break;
         case 'co':
           slice = availableGlobal.slice(0, Math.min(3, availableGlobal.length));
-          methodName = 'co';  // ✅ FIXED: Consistent method name
+          methodName = 'co';
           break;
         case 'cf':
           slice = availableGlobal.slice(Math.min(5, availableGlobal.length), Math.min(8, availableGlobal.length));
@@ -406,7 +404,7 @@ function guaranteeMethodDiversity(pools, topN) {
   const final = [];
   const used = new Set();
   
-  // First: Add one AI suggestion if available (not weight-dependent)
+  // Add one AI suggestion
   const aiPool = pools.ai || [];
   if (aiPool.length > 0) {
     const aiCandidate = aiPool[0];
@@ -450,7 +448,6 @@ function guaranteeMethodDiversity(pools, topN) {
       }
     });
 
-  // ✅ FIXED: Ensure we don't exceed topN
   if (final.length > topN) {
     final.length = topN;
   }
@@ -513,7 +510,7 @@ module.exports = {
         personal: boostedPersonal.sort((a, b) => b.score - a.score)
       };
 
-      // Get AI suggestions (separate from weight system)
+      // Get AI suggestions
       const topHistory = Object.entries(userScores)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
@@ -524,7 +521,7 @@ module.exports = {
         topHistory, currentNames, topN, nameToCode, currentCodes
       );
 
-      // AI is handled separately - not part of weight system
+      // AI is handled separately
       if (aiCandidates.length > 0) {
         pools.ai = aiCandidates;
         console.log(`✅ AI suggestions: ${aiCandidates.length} items`);
@@ -559,7 +556,6 @@ module.exports = {
         };
       };
 
-      // Handle showAllAI parameter
       if (showAllAI) {
         const usedCodes = new Set(final.map(item => item.code));
         

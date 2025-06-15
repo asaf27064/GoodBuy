@@ -80,8 +80,7 @@ async function main() {
         product: {
           itemCode: p._id,
           name:     p.name,
-          image:    p.image,
-          numUnits: faker.number.int({ min: 1, max: 4 })
+          image:    p.image
         },
         numUnits: faker.number.int({ min: 1, max: 4 })
       }));
@@ -95,8 +94,7 @@ async function main() {
               product: {
                 itemCode: prod._id,
                 name:     prod.name,
-                image:    prod.image,
-                numUnits: 1
+                image:    prod.image
               },
               numUnits: 1
             });
