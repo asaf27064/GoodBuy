@@ -96,7 +96,7 @@ export default function RecommendationsScreen({ route, navigation }) {
     switch (method) {
       case 'ai': return theme.colors.primary;
       case 'habit': return '#FF9800';
-      case 'co-occurrence': return '#4CAF50';
+      case 'co': return '#4CAF50';
       case 'personal': return '#9C27B0';
       case 'cf': return '#2196F3';
       default: return theme.colors.outline;
@@ -116,7 +116,7 @@ export default function RecommendationsScreen({ route, navigation }) {
         methodLabel = `Your usual choice on ${todayName}`;
         break;
       }
-      case 'co-occurrence': methodLabel = 'Goes well together'; break;
+      case 'co': methodLabel = 'Goes well together'; break;
       case 'personal': methodLabel = 'Based on your history'; break;
       case 'cf': methodLabel = 'Popular with similar users'; break;
       case 'ai': methodLabel = 'AI suggestion'; break;

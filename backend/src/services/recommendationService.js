@@ -6,7 +6,7 @@ const aiClient = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Constants
+// Constants for better maintainability
 const CONSTANTS = {
   DECAY_LAMBDA: 0.000001,
   MIN_HABITS: 2,
@@ -14,7 +14,9 @@ const CONSTANTS = {
   SIMILAR_USERS_LIMIT: 10,
   GLOBAL_BOOST_RATIO: 0.1,
   AI_TIMEOUT: 10000,
-  MIN_AI_SCORE: 1
+  MIN_AI_SCORE: 1,
+  GUARANTEED_METHODS: ['ai', 'co', 'personal', 'cf', 'habit']
+  // No weights - we use method diversity based on scores
 };
 
 /**
@@ -85,7 +87,7 @@ function calculateRecencyFrequencyScores(purchaseHistory, now) {
 }
 
 /**
- * Detects user habits based on weekday patterns
+ * Detects user habits based on weekday patterns - More lenient
  */
 function detectHabits(purchaseHistory, todayWd, currentCodes) {
   const weekdayCounts = {};
@@ -109,7 +111,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
     }
   });
 
-  // Today's habits first
+  // More lenient habit detection - include items with pattern on any day if today fails
   let candidates = Object.entries(weekdayCounts)
     .filter(([code, counts]) =>
       !currentCodes.has(code) && (counts[todayWd] || 0) >= MIN_HABITS
@@ -120,7 +122,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
       method: 'habit'
     }));
 
-  // Fallback to strong patterns on other days
+  // If no habits for today, look for strong patterns on other days
   if (candidates.length === 0) {
     candidates = Object.entries(weekdayCounts)
       .filter(([code, counts]) => {
@@ -136,14 +138,14 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
           method: 'habit'
         };
       })
-      .slice(0, 5);
+      .slice(0, 5); // Limit to top 5
   }
 
   return candidates;
 }
 
 /**
- * Finds co-occurrence candidates
+ * Finds co-occurrence candidates - More inclusive
  */
 function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
   const coCounts = {};
@@ -155,6 +157,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
         ?.map(p => p.product?.itemCode)
         .filter(Boolean) || [];
       
+      // More lenient - count if ANY item from current list appears
       if (!codes.some(c => currentCodes.has(c))) return;
 
       codes.forEach(c => {
@@ -172,12 +175,12 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
     .map(([code, co]) => ({
       code,
       score: co * (1 + CO_OCCURRENCE_ALPHA * (userScores[code] || 0)),
-      method: 'co-occurrence'
+      method: 'co'  // ✅ FIXED: Consistent with pool key
     }));
 }
 
 /**
- * Calculates collaborative filtering recommendations
+ * Calculates collaborative filtering recommendations - Enhanced
  */
 async function calculateCollaborativeFiltering(purchaseHistory, userId, currentCodes) {
   try {
@@ -279,7 +282,7 @@ function applyGlobalBoost(candidates, globalCounts, maxCount) {
 }
 
 /**
- * Gets AI suggestions
+ * Gets AI-powered suggestions - real AI only, no fallback
  */
 async function getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes) {
   if (!process.env.GEMINI_API_KEY) {
@@ -336,7 +339,7 @@ Format as a JSON array of objects, e.g.:
             suggestionReason: reason.trim()
           };
         })
-        .filter(Boolean);
+        .filter(c => c && c.score >= CONSTANTS.MIN_AI_SCORE); // ✅ FIXED: Use MIN_AI_SCORE
 
       console.log(`✅ Gemini AI suggestions: ${aiCandidates.length} items`);
       return aiCandidates;
@@ -345,131 +348,111 @@ Format as a JSON array of objects, e.g.:
     console.warn('Gemini AI failed:', error.message);
   }
 
+  // Return empty if AI fails - no fallback
   console.log('❌ No AI suggestions available');
   return [];
 }
 
 /**
- * Ensures each method has at least one candidate using fallbacks
+ * Ensures each non-AI method has at least one candidate - Enhanced with safeguards
  */
 function ensureMethodAvailability(pools, globalCounts, currentCodes) {
-  const methods = ['habit', 'co', 'cf', 'personal'];
+  const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
   
-  methods.forEach(method => {
+  // Get available global products once for efficiency
+  const availableGlobal = Object.entries(globalCounts)
+    .filter(([code]) => !currentCodes.has(code))
+    .sort(([,a], [,b]) => b - a);
+  
+  NON_AI_METHODS.forEach(method => {
     if (!pools[method] || pools[method].length === 0) {
       console.log(`🔧 Generating fallback for method: ${method}`);
       
+      // Take different slices for variety, but ensure we don't go beyond available items
+      let slice, methodName;
       switch (method) {
         case 'personal':
-          const topGlobal = Object.entries(globalCounts)
-            .filter(([code]) => !currentCodes.has(code))
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 5)
-            .map(([code], i) => ({
-              code,
-              score: 5 - i,
-              method: 'personal'
-            }));
-          pools[method] = topGlobal;
+          slice = availableGlobal.slice(0, Math.min(5, availableGlobal.length));
+          methodName = 'personal';
           break;
-          
         case 'co':
-          const coFallback = Object.entries(globalCounts)
-            .filter(([code]) => !currentCodes.has(code))
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 3)
-            .map(([code], i) => ({
-              code,
-              score: 3 - i,
-              method: 'co-occurrence'
-            }));
-          pools[method] = coFallback;
+          slice = availableGlobal.slice(0, Math.min(3, availableGlobal.length));
+          methodName = 'co';  // ✅ FIXED: Consistent method name
           break;
-          
         case 'cf':
-          const cfFallback = Object.entries(globalCounts)
-            .filter(([code]) => !currentCodes.has(code))
-            .sort(([,a], [,b]) => b - a)
-            .slice(5, 8)
-            .map(([code], i) => ({
-              code,
-              score: 3 - i,
-              method: 'cf'
-            }));
-          pools[method] = cfFallback;
+          slice = availableGlobal.slice(Math.min(5, availableGlobal.length), Math.min(8, availableGlobal.length));
+          methodName = 'cf';
           break;
-          
         case 'habit':
-          const habitFallback = Object.entries(globalCounts)
-            .filter(([code]) => !currentCodes.has(code))
-            .sort(([,a], [,b]) => b - a)
-            .slice(8, 10)
-            .map(([code], i) => ({
-              code,
-              score: 2 - i,
-              method: 'habit'
-            }));
-          pools[method] = habitFallback;
+          slice = availableGlobal.slice(Math.min(8, availableGlobal.length), Math.min(10, availableGlobal.length));
+          methodName = 'habit';
           break;
       }
+      
+      pools[method] = slice.map(([code], i) => ({
+        code,
+        score: slice.length - i,
+        method: methodName
+      }));
     }
   });
 }
 
 /**
- * Smart selection without weights - based on quality and diversity
+ * Guaranteed method diversity - ensures at least one from each non-AI method + AI separately
  */
-function smartSelection(pools, topN) {
+function guaranteeMethodDiversity(pools, topN) {
+  const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
   const final = [];
   const used = new Set();
-
-  // Always prioritize AI
-  if (pools.ai && pools.ai.length > 0) {
-    const aiCandidate = pools.ai[0];
+  
+  // First: Add one AI suggestion if available (not weight-dependent)
+  const aiPool = pools.ai || [];
+  if (aiPool.length > 0) {
+    const aiCandidate = aiPool[0];
     if (!used.has(aiCandidate.code)) {
       used.add(aiCandidate.code);
       final.push(aiCandidate);
-      console.log(`🤖 Added AI: ${aiCandidate.code}`);
     }
   }
 
-  // Get the best candidate from each method (diversity first)
-  const methods = ['personal', 'co', 'cf', 'habit'];
-  methods.forEach(method => {
+  // Second: Get one from each non-AI method
+  NON_AI_METHODS.forEach(method => {
     if (final.length >= topN) return;
     
     const pool = pools[method] || [];
-    if (pool.length > 0) {
-      const bestCandidate = pool[0]; // Already sorted by score
-      if (!used.has(bestCandidate.code)) {
-        used.add(bestCandidate.code);
-        final.push(bestCandidate);
-        console.log(`✅ Added best ${method}: ${bestCandidate.code} (score: ${bestCandidate.score.toFixed(2)})`);
+    for (const candidate of pool) {
+      if (!used.has(candidate.code)) {
+        used.add(candidate.code);
+        final.push(candidate);
+        break;
       }
     }
   });
 
-  // Fill remaining slots with highest scores from all methods
-  if (final.length < topN) {
-    // Collect all remaining candidates
-    const allRemaining = [];
-    Object.values(pools).forEach(pool => {
-      pool.forEach(candidate => {
-        if (!used.has(candidate.code)) {
-          allRemaining.push(candidate);
-        }
-      });
+  // Third: Fill remaining slots with best remaining candidates from all methods
+  const allRemaining = [];
+  Object.values(pools).forEach(pool => {
+    pool.forEach(candidate => {
+      if (!used.has(candidate.code)) {
+        allRemaining.push(candidate);
+      }
     });
+  });
 
-    // Sort by score and take the best
-    allRemaining
-      .sort((a, b) => b.score - a.score)
-      .slice(0, topN - final.length)
-      .forEach(candidate => {
+  // Sort by score and fill remaining slots
+  allRemaining
+    .sort((a, b) => b.score - a.score)
+    .forEach(candidate => {
+      if (final.length < topN && !used.has(candidate.code)) {
         used.add(candidate.code);
         final.push(candidate);
-        console.log(`⭐ Added high-score ${candidate.method}: ${candidate.code} (score: ${candidate.score.toFixed(2)})`);
-      });
+      }
+    });
+
+  // ✅ FIXED: Ensure we don't exceed topN
+  if (final.length > topN) {
+    final.length = topN;
   }
 
   return final;
@@ -517,7 +500,7 @@ module.exports = {
         .filter(([code]) => !currentCodes.has(code))
         .map(([code, score]) => ({ code, score, method: 'personal' }));
 
-      // Apply global popularity boost
+      // Get global popularity and apply boost
       const { counts: globalCounts, maxCount } = await getGlobalPopularity();
       const boostedCo = applyGlobalBoost(coCandidates, globalCounts, maxCount);
       const boostedPersonal = applyGlobalBoost(personalCandidates, globalCounts, maxCount);
@@ -530,7 +513,7 @@ module.exports = {
         personal: boostedPersonal.sort((a, b) => b.score - a.score)
       };
 
-      // Get AI suggestions
+      // Get AI suggestions (separate from weight system)
       const topHistory = Object.entries(userScores)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
@@ -541,6 +524,7 @@ module.exports = {
         topHistory, currentNames, topN, nameToCode, currentCodes
       );
 
+      // AI is handled separately - not part of weight system
       if (aiCandidates.length > 0) {
         pools.ai = aiCandidates;
         console.log(`✅ AI suggestions: ${aiCandidates.length} items`);
@@ -548,11 +532,11 @@ module.exports = {
         console.log('❌ No AI suggestions available');
       }
 
-      // Ensure all methods have candidates
+      // Ensure non-AI methods have candidates
       ensureMethodAvailability(pools, globalCounts, currentCodes);
 
-      // Use smart selection for final recommendations
-      const final = smartSelection({ ...pools }, topN);
+      // Guarantee method diversity (AI + one from each other method)
+      const final = guaranteeMethodDiversity(pools, topN);
 
       // Format output
       const formatRecommendation = (item) => {
@@ -588,7 +572,7 @@ module.exports = {
         ['habit', 'co', 'cf', 'personal'].forEach(method => {
           const methodItems = (pools[method] || [])
             .filter(item => !usedCodes.has(item.code))
-            .slice(0, 3)
+            .slice(0, 3) // Limit per method
             .map(item => ({ ...item, isSupplementary: true }));
           supplementaryOther.push(...methodItems);
         });
