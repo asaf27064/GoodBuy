@@ -13,6 +13,6 @@
     "check-config": "node scripts/checkApiBase.js"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^9.1.2"
   }
 }

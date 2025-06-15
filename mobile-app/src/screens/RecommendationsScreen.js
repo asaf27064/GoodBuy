@@ -85,7 +85,7 @@ export default function RecommendationsScreen({ route, navigation }) {
     switch (method) {
       case 'ai': return 'robot';
       case 'habit': return 'calendar';
-      case 'co-occurrence': return 'basket';
+      case 'co': return 'basket';
       case 'personal': return 'account-circle';
       case 'cf': return 'account-group';
       default: return 'lightbulb-outline';
