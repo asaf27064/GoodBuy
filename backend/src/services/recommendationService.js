@@ -6,7 +6,7 @@ const aiClient = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Constants - simplified and focused
+// Constants
 const CONSTANTS = {
   DECAY_LAMBDA: 0.000001,
   MIN_HABITS: 2,
@@ -15,7 +15,6 @@ const CONSTANTS = {
   GLOBAL_BOOST_RATIO: 0.1,
   AI_TIMEOUT: 10000,
   MIN_AI_SCORE: 1
-  // No weights needed - we use smart selection based on quality
 };
 
 /**
@@ -280,7 +279,7 @@ function applyGlobalBoost(candidates, globalCounts, maxCount) {
 }
 
 /**
- * Gets AI-powered suggestions
+ * Gets AI suggestions
  */
 async function getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes) {
   if (!process.env.GEMINI_API_KEY) {
@@ -418,13 +417,13 @@ function ensureMethodAvailability(pools, globalCounts, currentCodes) {
 }
 
 /**
- * Smart selection without arbitrary weights - based on quality and diversity
+ * Smart selection without weights - based on quality and diversity
  */
 function smartSelection(pools, topN) {
   const final = [];
   const used = new Set();
 
-  // 1. Always prioritize AI if available (it's our most sophisticated method)
+  // Always prioritize AI
   if (pools.ai && pools.ai.length > 0) {
     const aiCandidate = pools.ai[0];
     if (!used.has(aiCandidate.code)) {
@@ -434,7 +433,7 @@ function smartSelection(pools, topN) {
     }
   }
 
-  // 2. Get the best candidate from each method (diversity first)
+  // Get the best candidate from each method (diversity first)
   const methods = ['personal', 'co', 'cf', 'habit'];
   methods.forEach(method => {
     if (final.length >= topN) return;
@@ -450,7 +449,7 @@ function smartSelection(pools, topN) {
     }
   });
 
-  // 3. Fill remaining slots with highest scores from all methods
+  // Fill remaining slots with highest scores from all methods
   if (final.length < topN) {
     // Collect all remaining candidates
     const allRemaining = [];
