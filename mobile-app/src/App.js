@@ -4,6 +4,8 @@ import axios from 'axios';
 import io from 'socket.io-client';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MotiView } from 'moti';
+import { PriceSyncProvider } from './contexts/PriceSyncContext';
+
 
 // React Navigation
 import { NavigationContainer } from '@react-navigation/native';
@@ -162,9 +164,11 @@ export default function App() {
   return (
     <PaperProvider theme={paperTheme}>
       <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-        </NavigationContainer>
+        <PriceSyncProvider>
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </PriceSyncProvider>
       </AuthProvider>
     </PaperProvider>
   );

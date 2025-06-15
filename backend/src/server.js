@@ -59,6 +59,8 @@ const storeRoutes = require('./routes/storeRoutes')
 const productRoutes = require('./routes/productRoutes')
 const purchaseRoutes = require('./routes/purchaseRoutes')
 const recommendationRoutes = require('./routes/recommendationRoutes')
+const systemRoutes = require('./routes/system');
+
 
 app.use('/api/Users', userRoutes);
 app.use('/api/ShoppingLists', shoppingListRoutes);
@@ -66,6 +68,7 @@ app.use('/api/Stores', storeRoutes);
 app.use('/api/Products', productRoutes);
 app.use('/api/Purchases', purchaseRoutes);
 app.use('/api/Recommendations', recommendationRoutes);
+app.use('/api/system', systemRoutes);
 
 
 

@@ -65,14 +65,14 @@ async function master() {
     const env = { ...process.env, XML_SLICE: JSON.stringify(slice) };
     promises.push(new Promise((resolve, reject) => {
       const w = cluster.fork(env);
-      w.on('message', msg => totalInserted += msg.inserted);
+      w.on('message', msg => totalInserted += msg.processed);
       w.on('exit', code => code === 0
         ? resolve()
         : reject(new Error(`Worker exit ${code}`)));
     }));
   }
   await Promise.all(promises);
-  console.log(`🏁 All workers done, inserted ${totalInserted} docs`);
+  console.log(`🏁 All workers done, processed ${totalInserted} items`);
 
   if (MODE === 'init') {
     console.log(`🔄 Renaming ${TEMP_COLL} → ${COLL_NAME}`);
@@ -261,7 +261,7 @@ async function worker() {
     });
   }
 
-  process.send({ inserted });
+  process.send({ processed: inserted });
   await client.close();
   process.exit(0);
 }

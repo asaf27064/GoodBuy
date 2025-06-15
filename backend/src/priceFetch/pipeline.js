@@ -12,6 +12,24 @@ const baseDir        = __dirname;
 const now = () => new Date().toISOString();
 const hrToMs = hr => (hr[0] * 1000 + hr[1] / 1e6).toFixed(0);
 
+function fireAndForget(label, script, args = []) {
+  console.log(`\n[${now()}] 🔄 Background: ${label}`);
+
+  const proc = spawn('node', [script, ...args], {
+    cwd: baseDir,
+    stdio: 'inherit',
+    detached: true
+  });
+
+  proc.unref();
+
+  proc.on('exit', code =>
+    console.log(`[${now()}] 🔄 ${label} finished with code ${code}`));
+
+  proc.on('error', err =>
+    console.error(`[${now()}] 🔄 ${label} error:`, err));
+}
+
 function runCommand(label, cmd, args = []) {
   const start = process.hrtime();
   console.log(`\n[${now()}] 🚀 Starting: ${label}`);
@@ -98,13 +116,21 @@ async function main() {
   await runCommand(
     'STEP 6: seedProductsFromPriceItems.js',
     'node',
-    ['seedProductsFromPriceItems.js']    // the script itself doesn’t need `mode`
+    ['seedProductsFromPriceItems.js']
   );
 
-  await runCommand(
+  if (mode === 'init') {
+    await runCommand(
+      'STEP 6b: bootstrapSystemMeta.js',
+      'node',
+      ['bootstrapSystemMeta.js']
+    );
+  }
+
+  fireAndForget(
     'STEP 7: sync_and_update_images_r2.js',
-    'node',
-    ['sync_and_update_images_r2.js', mode]
+    'sync_and_update_images_r2.js',
+    [mode]
   );
 
   const totalTime = hrToMs(process.hrtime(pipelineStart));

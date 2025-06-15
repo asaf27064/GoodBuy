@@ -15,6 +15,7 @@ import EditHistoryScreen from './EditHistoryScreen'
 import RecommendationScreen from './RecommendationsScreen'
 import PriceComparisonScreen from './PriceComparisonScreen'
 import AddItemScreen from './AddItemScreen'
+import PriceSyncBanner from '../components/PriceSyncBanner';
 
 MaterialCommunityIcons.loadFont()
 const Stack = createNativeStackNavigator()
@@ -102,6 +103,7 @@ export default function ShoppingListScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <PriceSyncBanner />
       <AddListModal isVisible={isModalVisible} onClose={handleCloseModal} createList={createNewList} />
       <FlatList data={shoppingLists} keyExtractor={item => item._id} renderItem={renderItem} contentContainerStyle={{ paddingVertical: 8 }} />
       <TouchableHighlight
