@@ -95,11 +95,17 @@ async function main() {
   await fs.promises.rm(path.join(baseDir, 'Downloads'), { recursive: true, force: true });
   console.log(`[${now()}] 🗑 Deleted Downloads folder`);
 
-  /*await runCommand(
-    'STEP 6: sync_and_update_images_r2.js',
+  await runCommand(
+    'STEP 6: seedProductsFromPriceItems.js',
+    'node',
+    ['seedProductsFromPriceItems.js']    // the script itself doesn’t need `mode`
+  );
+
+  await runCommand(
+    'STEP 7: sync_and_update_images_r2.js',
     'node',
     ['sync_and_update_images_r2.js', mode]
-  );*/
+  );
 
   const totalTime = hrToMs(process.hrtime(pipelineStart));
   console.log(`\n[${now()}] 🎉 Pipeline completed in ${totalTime}ms (${(totalTime/1000).toFixed(1)}s)`);
