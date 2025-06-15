@@ -6,7 +6,7 @@ const aiClient = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Constants for better maintainability
+// Constants
 const CONSTANTS = {
   DECAY_LAMBDA: 0.000001,
   MIN_HABITS: 2,
@@ -14,19 +14,8 @@ const CONSTANTS = {
   SIMILAR_USERS_LIMIT: 10,
   GLOBAL_BOOST_RATIO: 0.1,
   AI_TIMEOUT: 10000,
-  MIN_AI_SCORE: 1,
-  GUARANTEED_METHODS: ['ai', 'co', 'personal', 'cf', 'habit'],
-  DEFAULT_WEIGHTS: {
-    habit: 0.25,
-    co: 0.25,
-    cf: 0.25,
-    personal: 0.25
-    // AI is handled separately - not weight-dependent
-  }
+  MIN_AI_SCORE: 1
 };
-
-// Remove fallback AI suggestions - we want real AI only
-// const FALLBACK_AI_SUGGESTIONS = [...]
 
 /**
  * Safely extracts JSON array from AI response text
@@ -96,7 +85,7 @@ function calculateRecencyFrequencyScores(purchaseHistory, now) {
 }
 
 /**
- * Detects user habits based on weekday patterns - More lenient
+ * Detects user habits based on weekday patterns
  */
 function detectHabits(purchaseHistory, todayWd, currentCodes) {
   const weekdayCounts = {};
@@ -120,7 +109,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
     }
   });
 
-  // More lenient habit detection - include items with pattern on any day if today fails
+  // Today's habits first
   let candidates = Object.entries(weekdayCounts)
     .filter(([code, counts]) =>
       !currentCodes.has(code) && (counts[todayWd] || 0) >= MIN_HABITS
@@ -131,7 +120,7 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
       method: 'habit'
     }));
 
-  // If no habits for today, look for strong patterns on other days
+  // Fallback to strong patterns on other days
   if (candidates.length === 0) {
     candidates = Object.entries(weekdayCounts)
       .filter(([code, counts]) => {
@@ -147,14 +136,14 @@ function detectHabits(purchaseHistory, todayWd, currentCodes) {
           method: 'habit'
         };
       })
-      .slice(0, 5); // Limit to top 5
+      .slice(0, 5);
   }
 
   return candidates;
 }
 
 /**
- * Finds co-occurrence candidates - More inclusive
+ * Finds co-occurrence candidates
  */
 function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
   const coCounts = {};
@@ -166,7 +155,6 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
         ?.map(p => p.product?.itemCode)
         .filter(Boolean) || [];
       
-      // More lenient - count if ANY item from current list appears
       if (!codes.some(c => currentCodes.has(c))) return;
 
       codes.forEach(c => {
@@ -189,7 +177,7 @@ function findCoOccurrenceCandidates(purchaseHistory, currentCodes, userScores) {
 }
 
 /**
- * Calculates collaborative filtering recommendations - Enhanced
+ * Calculates collaborative filtering recommendations
  */
 async function calculateCollaborativeFiltering(purchaseHistory, userId, currentCodes) {
   try {
@@ -291,7 +279,7 @@ function applyGlobalBoost(candidates, globalCounts, maxCount) {
 }
 
 /**
- * Gets AI-powered suggestions - real AI only, no fallback
+ * Gets AI suggestions
  */
 async function getAISuggestions(topHistory, currentNames, topN, nameToCode, currentCodes) {
   if (!process.env.GEMINI_API_KEY) {
@@ -357,18 +345,17 @@ Format as a JSON array of objects, e.g.:
     console.warn('Gemini AI failed:', error.message);
   }
 
-  // Return empty if AI fails - no fallback
   console.log('❌ No AI suggestions available');
   return [];
 }
 
 /**
- * Ensures each non-AI method has at least one candidate
+ * Ensures each method has at least one candidate using fallbacks
  */
-function ensureMethodAvailability(pools, globalCounts, maxCount, nameToCode, currentCodes) {
-  const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal']; // Exclude AI
+function ensureMethodAvailability(pools, globalCounts, currentCodes) {
+  const methods = ['habit', 'co', 'cf', 'personal'];
   
-  NON_AI_METHODS.forEach(method => {
+  methods.forEach(method => {
     if (!pools[method] || pools[method].length === 0) {
       console.log(`🔧 Generating fallback for method: ${method}`);
       
@@ -430,56 +417,60 @@ function ensureMethodAvailability(pools, globalCounts, maxCount, nameToCode, cur
 }
 
 /**
- * Guaranteed method diversity - ensures at least one from each non-AI method + AI separately
+ * Smart selection without weights - based on quality and diversity
  */
-function guaranteeMethodDiversity(pools, topN) {
-  const NON_AI_METHODS = ['habit', 'co', 'cf', 'personal'];
+function smartSelection(pools, topN) {
   const final = [];
   const used = new Set();
-  
-  // First: Add one AI suggestion if available (not weight-dependent)
-  const aiPool = pools.ai || [];
-  if (aiPool.length > 0) {
-    const aiCandidate = aiPool[0];
+
+  // Always prioritize AI
+  if (pools.ai && pools.ai.length > 0) {
+    const aiCandidate = pools.ai[0];
     if (!used.has(aiCandidate.code)) {
       used.add(aiCandidate.code);
       final.push(aiCandidate);
+      console.log(`🤖 Added AI: ${aiCandidate.code}`);
     }
   }
 
-  // Second: Get one from each non-AI method
-  NON_AI_METHODS.forEach(method => {
+  // Get the best candidate from each method (diversity first)
+  const methods = ['personal', 'co', 'cf', 'habit'];
+  methods.forEach(method => {
     if (final.length >= topN) return;
     
     const pool = pools[method] || [];
-    for (const candidate of pool) {
-      if (!used.has(candidate.code)) {
-        used.add(candidate.code);
-        final.push(candidate);
-        break;
+    if (pool.length > 0) {
+      const bestCandidate = pool[0]; // Already sorted by score
+      if (!used.has(bestCandidate.code)) {
+        used.add(bestCandidate.code);
+        final.push(bestCandidate);
+        console.log(`✅ Added best ${method}: ${bestCandidate.code} (score: ${bestCandidate.score.toFixed(2)})`);
       }
     }
   });
 
-  // Third: Fill remaining slots with best remaining candidates from all methods
-  const allRemaining = [];
-  Object.values(pools).forEach(pool => {
-    pool.forEach(candidate => {
-      if (!used.has(candidate.code)) {
-        allRemaining.push(candidate);
-      }
+  // Fill remaining slots with highest scores from all methods
+  if (final.length < topN) {
+    // Collect all remaining candidates
+    const allRemaining = [];
+    Object.values(pools).forEach(pool => {
+      pool.forEach(candidate => {
+        if (!used.has(candidate.code)) {
+          allRemaining.push(candidate);
+        }
+      });
     });
-  });
 
-  // Sort by score and fill remaining slots
-  allRemaining
-    .sort((a, b) => b.score - a.score)
-    .forEach(candidate => {
-      if (final.length < topN && !used.has(candidate.code)) {
+    // Sort by score and take the best
+    allRemaining
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN - final.length)
+      .forEach(candidate => {
         used.add(candidate.code);
         final.push(candidate);
-      }
-    });
+        console.log(`⭐ Added high-score ${candidate.method}: ${candidate.code} (score: ${candidate.score.toFixed(2)})`);
+      });
+  }
 
   return final;
 }
@@ -526,7 +517,7 @@ module.exports = {
         .filter(([code]) => !currentCodes.has(code))
         .map(([code, score]) => ({ code, score, method: 'personal' }));
 
-      // Get global popularity and apply boost
+      // Apply global popularity boost
       const { counts: globalCounts, maxCount } = await getGlobalPopularity();
       const boostedCo = applyGlobalBoost(coCandidates, globalCounts, maxCount);
       const boostedPersonal = applyGlobalBoost(personalCandidates, globalCounts, maxCount);
@@ -539,7 +530,7 @@ module.exports = {
         personal: boostedPersonal.sort((a, b) => b.score - a.score)
       };
 
-      // Get AI suggestions (separate from weight system)
+      // Get AI suggestions
       const topHistory = Object.entries(userScores)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
@@ -550,7 +541,6 @@ module.exports = {
         topHistory, currentNames, topN, nameToCode, currentCodes
       );
 
-      // AI is handled separately - not part of weight system
       if (aiCandidates.length > 0) {
         pools.ai = aiCandidates;
         console.log(`✅ AI suggestions: ${aiCandidates.length} items`);
@@ -558,11 +548,11 @@ module.exports = {
         console.log('❌ No AI suggestions available');
       }
 
-      // Ensure non-AI methods have candidates
-      ensureMethodAvailability(pools, globalCounts, maxCount, nameToCode, currentCodes);
+      // Ensure all methods have candidates
+      ensureMethodAvailability(pools, globalCounts, currentCodes);
 
-      // Guarantee method diversity (AI + one from each other method)
-      const final = guaranteeMethodDiversity(pools, topN);
+      // Use smart selection for final recommendations
+      const final = smartSelection({ ...pools }, topN);
 
       // Format output
       const formatRecommendation = (item) => {
@@ -598,7 +588,7 @@ module.exports = {
         ['habit', 'co', 'cf', 'personal'].forEach(method => {
           const methodItems = (pools[method] || [])
             .filter(item => !usedCodes.has(item.code))
-            .slice(0, 3) // Limit per method
+            .slice(0, 3)
             .map(item => ({ ...item, isSupplementary: true }));
           supplementaryOther.push(...methodItems);
         });
