@@ -85,8 +85,7 @@ export default function AddItemScreen({ route, navigation }) {
           addedItem: {
             itemCode: item.itemCode,
             name:     item.itemName,
-            image:    item.imageUrl,
-            numUnits: 1
+            image:    item.imageUrl
           }
         })
       }
@@ -112,8 +111,7 @@ export default function AddItemScreen({ route, navigation }) {
           addedItem: {
             itemCode: item.itemCode,
             name:     item.itemName,
-            image:    item.imageUrl,
-            numUnits: 1
+            image:    item.imageUrl
           }
         })
       }

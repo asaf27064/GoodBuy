@@ -1,20 +1,23 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const mongoose = require('mongoose')
+const { Schema } = mongoose
 
-const productWithAmountSchema = new Schema({
-  product: { 
-    type: Schema.Types.Mixed,
-    required: true 
-  },
-  numUnits: { type: Number, required: true, default: 1 }
-}, { _id: false });
+const productRefSchema = new Schema({
+  itemCode: { type: String, required: true },
+  name: { type: String, required: true },
+  image: { type: String, default: '' }
+}, { _id: false })
+
+const productQtySchema = new Schema({
+  product: productRefSchema,
+  numUnits: { type: Number, required: true, min: 1, default: 1 }
+}, { _id: false })
 
 const shoppingListSchema = new Schema({
   members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   title: { type: String },
-  importantList: { type: Boolean, required: true, default: false },
-  products: [productWithAmountSchema],
+  importantList: { type: Boolean, default: false },
+  products: [productQtySchema],
   editLog: { type: Array, default: [] }
-}, { timestamps: true });
+}, { timestamps: true })
 
-module.exports = mongoose.model('ShoppingList', shoppingListSchema);
+module.exports = mongoose.model('ShoppingList', shoppingListSchema)
