@@ -5,15 +5,11 @@ import io from 'socket.io-client';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MotiView } from 'moti';
 
-// React Navigation
+// Navigation
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {
-  createDrawerNavigator,
-  DrawerContentScrollView,
-  DrawerItem
-} from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 
 // Screens & stacks
 import { ShoppingListStack } from './screens/ShoppingListsScreen';
@@ -24,6 +20,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
+// Price Sync Context
+import { PriceSyncProvider } from './contexts/PriceSyncContext';
+
 // Theme
 import { Provider as PaperProvider, useTheme } from 'react-native-paper';
 import paperTheme from './theme/paperTheme';
@@ -33,7 +32,7 @@ import { API_BASE } from './config';
 
 MaterialCommunityIcons.loadFont();
 axios.defaults.baseURL = API_BASE;
-io(API_BASE); // just open socket
+const socket = io(API_BASE);
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,10 +41,7 @@ const Drawer = createDrawerNavigator();
 // Animated tab icon
 function AnimatedIcon({ name, color, size, focused }) {
   return (
-    <MotiView
-      animate={{ scale: focused ? 1.15 : 1 }}
-      transition={{ type: 'timing', duration: 200 }}
-    >
+    <MotiView animate={{ scale: focused ? 1.15 : 1 }} transition={{ type: 'timing', duration: 200 }}>
       <MaterialCommunityIcons name={name} color={color} size={size} />
     </MotiView>
   );
@@ -61,15 +57,8 @@ function MainTabs() {
         headerTintColor: colors.onPrimary,
         headerTitleStyle: { fontWeight: 'bold' },
         headerRight: () => (
-          <TouchableOpacity
-            onPress={() => navigation.openDrawer()}
-            style={styles.menuButton}
-          >
-            <MaterialCommunityIcons
-              name="menu"
-              size={24}
-              color={colors.onPrimary}
-            />
+          <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
+            <MaterialCommunityIcons name="menu" size={24} color={colors.onPrimary} />
           </TouchableOpacity>
         ),
         tabBarShowLabel: true,
@@ -89,30 +78,15 @@ function MainTabs() {
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarIcon: ({ color, size, focused }) => {
           const icons = {
-            ShopList: 'format-list-bulleted',
-            History: 'history'
+            ShopList: 'script-text',
+            History: 'clipboard-text-clock'
           };
-          return (
-            <AnimatedIcon
-              name={icons[route.name]}
-              color={color}
-              size={size}
-              focused={focused}
-            />
-          );
+          return <AnimatedIcon name={icons[route.name]} color={color} size={size} focused={focused} />;
         }
       })}
     >
-      <Tab.Screen
-        name="ShopList"
-        component={ShoppingListStack}
-        options={{ title: 'Shopping Lists', headerShown: false }}
-      />
-      <Tab.Screen
-        name="History"
-        component={ShoppingHistoryScreen}
-        options={{ title: 'Purchase History' }}
-      />
+      <Tab.Screen name="ShopList" component={ShoppingListStack} options={{ title: 'Shopping Lists', headerShown: false }} />
+      <Tab.Screen name="History" component={ShoppingHistoryScreen} options={{ title: 'Purchase History' }} />
     </Tab.Navigator>
   );
 }
@@ -124,15 +98,9 @@ function AppDrawer() {
     <Drawer.Navigator
       screenOptions={{ headerShown: false }}
       drawerPosition="right"
-      drawerContent={(props) => (
+      drawerContent={props => (
         <DrawerContentScrollView {...props}>
-          <DrawerItem
-            label="Logout"
-            onPress={() => {
-              logout();
-              props.navigation.closeDrawer();
-            }}
-          />
+          <DrawerItem label="Logout" onPress={() => { logout(); props.navigation.closeDrawer(); }} />
         </DrawerContentScrollView>
       )}
     >
@@ -155,7 +123,13 @@ function AuthStack() {
 function RootNavigator() {
   const { token, loading } = useAuth();
   if (loading) return null;
-  return token ? <AppDrawer /> : <AuthStack />;
+  return token ? (
+    <PriceSyncProvider>
+      <AppDrawer />
+    </PriceSyncProvider>
+  ) : (
+    <AuthStack />
+  );
 }
 
 export default function App() {

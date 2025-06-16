@@ -1,51 +1,40 @@
-const PriceItem  = require('../models/PriceItem')
-const ItemImage  = require('../models/ItemImage')
-const mongoose   = require('mongoose')
-const ObjectId   = mongoose.Types.ObjectId
-
-function escapeRegex(text) {
-  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
-}
+const Product   = require('../models/productModel')
+const ItemImage = require('../models/ItemImage')
+const escapeRegex = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
 
 exports.searchItems = async (req, res) => {
-  const term = req.params.name || ''
+  const term = (req.params.name || '').trim()
+  if (!term) return res.json({ results: [] })
+
   try {
-    const regex = new RegExp('^' + escapeRegex(term), 'i')
+    const regex   = new RegExp('^' + escapeRegex(term), 'i')
 
-    const docs = await PriceItem.aggregate([
-      { $match: { itemName: { $regex: regex } } },
-      { $group: {
-          _id: '$itemCode',
-          itemCode: { $first: '$itemCode' },
-          itemName: { $first: '$itemName' }
-        }
-      },
-      { $limit: 30 }
-    ]).exec()
+    const docs = await Product
+      .find({ name: { $regex: regex } })
+      .limit(30)
+      .lean()
 
-    const codes  = docs.map(d => d.itemCode)
-    const images = await ItemImage.find(
+    const codes  = docs.map(d => d._id)
+    const imgs   = await ItemImage.find(
       { itemCode: { $in: codes }, status: 'found' },
       'itemCode'
     ).lean()
-    const foundSet = new Set(images.map(i => i.itemCode))
+    const hasImg = new Set(imgs.map(i => i.itemCode))
 
     const base = process.env.PUBLIC_DEV_URL || ''
     const results = docs
       .map(d => ({
-        itemCode: d.itemCode,
-        itemName: d.itemName,
-        imageUrl: base
-          ? `${base}/images/${d.itemCode}.png`
-          : null,
-        hasImage: foundSet.has(d.itemCode)
+        itemCode : d._id,
+        itemName : d.name,
+        imageUrl : d.image || (base ? `${base}/images/${d._id}.png` : null),
+        hasImage : hasImg.has(d._id)
       }))
       .sort((a, b) => (a.hasImage === b.hasImage ? 0 : a.hasImage ? -1 : 1))
 
-    return res.json({ results })
+    res.json({ results })
   } catch (err) {
     console.error('searchItems error:', err)
-    return res.status(500).json({ message: 'Server error' })
+    res.status(500).json({ message: 'Server error' })
   }
 }
 
