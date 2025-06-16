@@ -1,27 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { Card, IconButton, TextInput, Text, useTheme } from 'react-native-paper';
 
-export default function EditListScreenItem({ product, removeProduct }) {
+export default function EditListScreenItem({ product, removeProduct, updateQuantity }) {
   const theme = useTheme();
   const MIN = 1;
   const MAX = 99;
   const [qty, setQty] = useState(product.numUnits);
 
+  // Sync local state with prop changes
+  useEffect(() => {
+    setQty(product.numUnits);
+  }, [product.numUnits]);
+
   const changeQty = (delta) => {
     const newQty = Math.min(Math.max(qty + delta, MIN), MAX);
-    product.numUnits = newQty;
     setQty(newQty);
+    
+    // Use the callback instead of direct mutation
+    if (updateQuantity) {
+      updateQuantity(product, newQty);
+    }
   };
 
   const onInputChange = (text) => {
     const n = parseInt(text, 10);
+    let newQty;
+    
     if (!isNaN(n)) {
-      const clamped = Math.min(Math.max(n, MIN), MAX);
-      product.numUnits = clamped;
-      setQty(clamped);
+      newQty = Math.min(Math.max(n, MIN), MAX);
     } else {
-      setQty(MIN);
+      newQty = MIN;
+    }
+    
+    setQty(newQty);
+    
+    // Use the callback instead of direct mutation
+    if (updateQuantity) {
+      updateQuantity(product, newQty);
     }
   };
 

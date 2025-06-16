@@ -53,6 +53,21 @@ export default function AddItemScreen({ route, navigation }) {
     doSearch(text)
   }
 
+  const handleItemSelect = (item) => {
+    const selectedItem = {
+      itemCode: item.itemCode,
+      name: item.itemName,
+      image: item.imageUrl,
+      category: item.category || 'General' // Add category if available
+    }
+    
+    // Use navigation.setParams on the previous screen and then go back
+    navigation.navigate('EditItems', {
+      listObj,
+      addedItem: selectedItem
+    })
+  }
+
   const Thumbnail = ({ uri, style }) => {
     const [error, setError] = useState(false)
     if (!uri || error) {
@@ -79,16 +94,7 @@ export default function AddItemScreen({ route, navigation }) {
   const renderListItem = ({ item }) => (
     <TouchableOpacity
       style={styles.listRow}
-      onPress={() =>
-        navigation.replace('EditItems', {
-          listObj,
-          addedItem: {
-            itemCode: item.itemCode,
-            name:     item.itemName,
-            image:    item.imageUrl
-          }
-        })
-      }
+      onPress={() => handleItemSelect(item)}
     >
       <Thumbnail uri={item.imageUrl} style={styles.listThumb} />
       <View style={styles.listText}>
@@ -105,16 +111,7 @@ export default function AddItemScreen({ route, navigation }) {
   const renderCardItem = ({ item }) => (
     <TouchableOpacity
       style={[styles.cardContainer, { backgroundColor: theme.colors.surface }]}
-      onPress={() =>
-        navigation.replace('EditItems', {
-          listObj,
-          addedItem: {
-            itemCode: item.itemCode,
-            name:     item.itemName,
-            image:    item.imageUrl
-          }
-        })
-      }
+      onPress={() => handleItemSelect(item)}
     >
       <Thumbnail uri={item.imageUrl} style={styles.cardImage} />
       <Text

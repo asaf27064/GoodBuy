@@ -141,15 +141,20 @@ export default function ShoppingListScreen({ navigation, route }) {
     }
   }, [])
 
-  // Handle refresh when coming back from EditListScreen
+  // Refresh data when screen comes into focus (for auto-save compatibility)
   useFocusEffect(
     React.useCallback(() => {
-      // Check if we need to refresh a specific list or all lists
+      // Always refresh when coming back to this screen
+      // This ensures we see any auto-saved changes
+      if (!loading) {
+        fetchShoppingLists()
+      }
+      
+      // Handle manual refresh triggers from the old save system
       const refreshListId = route.params?.refreshList
       const timestamp = route.params?.timestamp
       
       if (refreshListId || timestamp) {
-        // Refresh the data when we return from edit screen
         fetchShoppingLists()
         
         // Clear the refresh params
@@ -158,7 +163,7 @@ export default function ShoppingListScreen({ navigation, route }) {
           timestamp: undefined 
         })
       }
-    }, [route.params?.refreshList, route.params?.timestamp, navigation])
+    }, [route.params?.refreshList, route.params?.timestamp, navigation, loading])
   )
 
   const addList = () => setModalVisible(true)
