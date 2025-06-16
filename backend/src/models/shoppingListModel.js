@@ -17,7 +17,8 @@ const shoppingListSchema = new Schema({
   title: { type: String },
   importantList: { type: Boolean, default: false },
   products: [productQtySchema],
-  editLog: { type: Array, default: [] }
+  editLog: { type: Array, default: [] },
+  version: { type: Number, default: 0 }
 }, { timestamps: true })
 
 module.exports = mongoose.model('ShoppingList', shoppingListSchema)

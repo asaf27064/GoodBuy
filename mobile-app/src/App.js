@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import axios from 'axios';
-import io from 'socket.io-client';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MotiView } from 'moti';
 
@@ -20,6 +19,10 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
+// Collaboration System
+import { OperationalTransformProvider } from './contexts/operationalTransform';
+import { CollaborationProvider } from './contexts/collaborationContext';
+
 // Price Sync Context
 import { PriceSyncProvider } from './contexts/PriceSyncContext';
 
@@ -32,7 +35,6 @@ import { API_BASE } from './config';
 
 MaterialCommunityIcons.loadFont();
 axios.defaults.baseURL = API_BASE;
-const socket = io(API_BASE);
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -119,14 +121,18 @@ function AuthStack() {
   );
 }
 
-// Root
+// Root with collaboration providers
 function RootNavigator() {
   const { token, loading } = useAuth();
   if (loading) return null;
   return token ? (
-    <PriceSyncProvider>
-      <AppDrawer />
-    </PriceSyncProvider>
+    <OperationalTransformProvider>
+      <CollaborationProvider>
+        <PriceSyncProvider>
+          <AppDrawer />
+        </PriceSyncProvider>
+      </CollaborationProvider>
+    </OperationalTransformProvider>
   ) : (
     <AuthStack />
   );

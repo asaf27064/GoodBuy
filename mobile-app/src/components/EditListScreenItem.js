@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { Card, IconButton, TextInput, Text, useTheme } from 'react-native-paper';
 
-export default function EditListScreenItem({ product, removeProduct, updateQuantity }) {
+export default function EditListScreenItem({ 
+  product, 
+  removeProduct, 
+  updateQuantity, 
+  isBeingEdited = false 
+}) {
   const theme = useTheme();
   const MIN = 1;
   const MAX = 99;
   const [qty, setQty] = useState(product.numUnits);
 
-  // Sync local state with prop changes
+  // Sync local state with prop changes (from collaborative updates)
   useEffect(() => {
     setQty(product.numUnits);
   }, [product.numUnits]);
@@ -17,7 +22,7 @@ export default function EditListScreenItem({ product, removeProduct, updateQuant
     const newQty = Math.min(Math.max(qty + delta, MIN), MAX);
     setQty(newQty);
     
-    // Use the callback instead of direct mutation
+    // Use the collaborative callback
     if (updateQuantity) {
       updateQuantity(product, newQty);
     }
@@ -35,15 +40,32 @@ export default function EditListScreenItem({ product, removeProduct, updateQuant
     
     setQty(newQty);
     
-    // Use the callback instead of direct mutation
+    // Use the collaborative callback
     if (updateQuantity) {
       updateQuantity(product, newQty);
     }
   };
 
   return (
-    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>      
+    <Card style={[
+      styles.card, 
+      { 
+        backgroundColor: theme.colors.surface,
+        // Visual indicator for collaborative editing
+        borderColor: isBeingEdited ? theme.colors.primary : 'transparent',
+        borderWidth: isBeingEdited ? 2 : 0
+      }
+    ]}>      
       <Card.Content style={styles.row}>
+        {/* Collaborative editing indicator */}
+        {isBeingEdited && (
+          <View style={[styles.editingIndicator, { backgroundColor: theme.colors.primary }]}>
+            <Text style={{ color: theme.colors.onPrimary, fontSize: 10 }}>
+              ✏️
+            </Text>
+          </View>
+        )}
+
         <Image
           source={{ uri: product.product.image }}
           style={styles.image}
@@ -54,7 +76,7 @@ export default function EditListScreenItem({ product, removeProduct, updateQuant
             {product.product.name}
           </Text>
           <Text style={[styles.category, { color: theme.colors.onSurfaceVariant }]}> 
-            {product.product.category}
+            {product.product.category || 'General'}
           </Text>
         </View>
 
@@ -75,7 +97,14 @@ export default function EditListScreenItem({ product, removeProduct, updateQuant
               keyboardType="numeric"
               outlineColor={theme.colors.primary}
               activeOutlineColor={theme.colors.primary}
-              style={[styles.input, { backgroundColor: theme.colors.surface }]}
+              style={[
+                styles.input, 
+                { 
+                  backgroundColor: theme.colors.surface,
+                  // Highlight when being edited collaboratively
+                  borderColor: isBeingEdited ? theme.colors.primary : 'transparent'
+                }
+              ]}
               contentStyle={styles.inputContent}
             />
             <IconButton
@@ -107,10 +136,23 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 8,
     elevation: 2,
+    position: 'relative'
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  editingIndicator: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    elevation: 3
   },
   image: {
     width: 40,
