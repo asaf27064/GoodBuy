@@ -101,11 +101,11 @@ export default function EditListScreen({ route, navigation }) {
     }
   }, [])
 
-  // Debounced auto-save
+  // Smart debounced auto-save - 100ms feels instant but batches rapid changes
   const debouncedAutoSave = useCallback(
     debounce((currentProducts, currentListObj) => {
       autoSave(currentProducts, currentListObj)
-    }, 2000),
+    }, 100), // 100ms - optimal balance between feeling instant and batching
     [autoSave]
   )
 
@@ -115,7 +115,7 @@ export default function EditListScreen({ route, navigation }) {
                       JSON.stringify(products) !== JSON.stringify(initialRef.current)
     
     if (hasChanges) {
-      console.log('Changes detected, scheduling auto-save...')
+      console.log('Changes detected, smart auto-saving...')
       debouncedAutoSave(products, listObj)
     }
   }, [products, listObj, debouncedAutoSave])
