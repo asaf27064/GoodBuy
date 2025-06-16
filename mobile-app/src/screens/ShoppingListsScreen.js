@@ -8,6 +8,7 @@ import {
   ActivityIndicator
 } from 'react-native'
 import { useTheme } from 'react-native-paper'
+import { useFocusEffect } from '@react-navigation/native'
 import makeGlobalStyles from '../styles/globalStyles'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
@@ -101,7 +102,7 @@ export function ShoppingListStack() {
   )
 }
 
-export default function ShoppingListScreen({ navigation }) {
+export default function ShoppingListScreen({ navigation, route }) {
   const theme = useTheme()
   const styles = makeGlobalStyles(theme)
   const insets = useSafeAreaInsets()
@@ -110,7 +111,19 @@ export default function ShoppingListScreen({ navigation }) {
   const [shoppingLists, setShoppingLists] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // fetch all shopping lists on mount
+  // Function to fetch shopping lists
+  const fetchShoppingLists = async () => {
+    try {
+      const { data } = await axios.get('/api/ShoppingLists')
+      setShoppingLists(data)
+    } catch (err) {
+      console.error('Error fetching lists:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initial fetch on mount
   useEffect(() => {
     let isActive = true
     ;(async () => {
@@ -127,6 +140,26 @@ export default function ShoppingListScreen({ navigation }) {
       isActive = false
     }
   }, [])
+
+  // Handle refresh when coming back from EditListScreen
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if we need to refresh a specific list or all lists
+      const refreshListId = route.params?.refreshList
+      const timestamp = route.params?.timestamp
+      
+      if (refreshListId || timestamp) {
+        // Refresh the data when we return from edit screen
+        fetchShoppingLists()
+        
+        // Clear the refresh params
+        navigation.setParams({ 
+          refreshList: undefined, 
+          timestamp: undefined 
+        })
+      }
+    }, [route.params?.refreshList, route.params?.timestamp, navigation])
+  )
 
   const addList = () => setModalVisible(true)
   const handleCloseModal = () => setModalVisible(false)

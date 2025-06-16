@@ -3,6 +3,7 @@ import axios from 'axios'
 import { SafeAreaView, FlatList, View, Text, TouchableHighlight, Alert } from 'react-native'
 import { useTheme, IconButton } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
 import ProductListItem from '../components/EditListScreenItem'
 import { useAuth } from '../contexts/AuthContext'
 import { API_BASE } from '../config'
@@ -18,6 +19,27 @@ export default function EditListScreen({ route, navigation }) {
   const initialRef = useRef([...initialList.products || []])
   const { user } = useAuth()
 
+  // Reset state when screen comes into focus (handles navigation back/forward properly)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if we have a fresh addedItem that needs to be processed
+      const addedItem = route.params?.addedItem
+      if (addedItem) {
+        // Add the new item
+        const newEntry = { product: addedItem, numUnits: 1 }
+        setProducts(prevProducts => {
+          // Avoid duplicates
+          const exists = prevProducts.some(p => p.product.itemCode === addedItem.itemCode)
+          if (exists) return prevProducts
+          return [...prevProducts, newEntry]
+        })
+        
+        // Clear the addedItem param immediately to prevent re-processing
+        navigation.setParams({ addedItem: undefined })
+      }
+    }, [route.params?.addedItem, navigation])
+  )
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -26,6 +48,7 @@ export default function EditListScreen({ route, navigation }) {
           color={theme.colors.onPrimary}
           onPress={() =>
             navigation.navigate('AddItem', {
+              // Pass current state, not params
               listObj: { ...listObj, products }
             })
           }
@@ -33,18 +56,6 @@ export default function EditListScreen({ route, navigation }) {
       )
     })
   }, [navigation, theme.colors.onPrimary, listObj, products])
-
-  useEffect(() => {
-    const added = route.params?.addedItem
-    if (added) {
-      const newEntry = { product: added, numUnits: 1 }
-      const newProducts = [...products, newEntry]
-      const updatedList = { ...listObj, products: newProducts }
-      setProducts(newProducts)
-      setListObj(updatedList)
-      navigation.setParams({ addedItem: undefined, listObj: updatedList })
-    }
-  }, [route.params?.addedItem])
 
   const diffLog = (oldList, newList) => {
     const CurrentUser = user?.username
@@ -62,41 +73,61 @@ export default function EditListScreen({ route, navigation }) {
     return edits
   }
 
-const saveChanges = async () => {
-  const changes = diffLog(initialRef.current, products)
-  const payload = {
-    list: { ...listObj, products, editLog: [ ...(listObj.editLog || []), ...changes ] },
-    changes
+  const saveChanges = async () => {
+    const changes = diffLog(initialRef.current, products)
+    const updatedListObj = { ...listObj, products }
+    const payload = {
+      list: { ...updatedListObj, editLog: [ ...(listObj.editLog || []), ...changes ] },
+      changes
+    }
+
+    try {
+      const { data } = await axios.put(`/api/ShoppingLists/${listObj._id}`, payload)
+      const updated = data.list || data
+      
+      // Update local state with server response
+      setListObj(updated)
+      setProducts(updated.products || [])
+      initialRef.current = [ ...(updated.products || []) ]
+      
+      Alert.alert('Success', 'List saved successfully', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            // Navigate back and refresh parent screen
+            navigation.navigate('My Shopping Lists', { 
+              refreshList: updated._id,
+              timestamp: Date.now() // Force refresh
+            })
+          }
+        }
+      ])
+    } catch (e) {
+      Alert.alert('Save Failed', JSON.stringify(e.response?.data || e.message, null, 2), [{ text: 'OK' }])
+    }
   }
 
-  try {
-    const { data } = await axios.put(`/api/ShoppingLists/${listObj._id}`, payload)
-    const updated = data.list || data
-    setListObj(updated)
-    setProducts(updated.products || [])
-    initialRef.current = [ ...(updated.products || []) ]
-    Alert.alert('Success', 'List saved successfully')
-    navigation.goBack()
-  } catch (e) {
-    Alert.alert('Save Failed', JSON.stringify(e.response?.data || e.message, null, 2), [{ text: 'OK' }])
+  const removeProduct = (productToRemove) => {
+    setProducts(prevProducts => {
+      const filtered = prevProducts.filter(x => x !== productToRemove)
+      return filtered
+    })
+    // Update listObj to keep it in sync
+    setListObj(prevList => ({
+      ...prevList,
+      products: products.filter(x => x !== productToRemove)
+    }))
   }
-}
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <FlatList
         data={products}
-        keyExtractor={(_, i) => `prod_${i}`}
+        keyExtractor={(item, index) => `${item.product.itemCode}_${index}`}
         renderItem={({ item }) => (
           <ProductListItem
             product={item}
-            removeProduct={p => {
-              const filtered = products.filter(x => x !== p)
-              const updatedList = { ...listObj, products: filtered }
-              setProducts(filtered)
-              setListObj(updatedList)
-              navigation.setParams({ listObj: updatedList })
-            }}
+            removeProduct={removeProduct}
           />
         )}
         contentContainerStyle={{ padding: 8 }}
