@@ -1,5 +1,3 @@
-// mobile-app/src/screens/ShoppingListsScreen.js
-
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import {
@@ -17,6 +15,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 // Components & Screens
 import ShoppingListScreenItem from '../components/ShoppingListScreenItem'
 import AddListModal from '../components/AddListModal'
+import PriceSyncBanner from '../components/PriceSyncBanner'
 
 // Navigation
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -168,12 +167,24 @@ export default function ShoppingListScreen({ navigation }) {
         createList={createNewList}
       />
 
-      <FlatList
-        data={shoppingLists}
-        keyExtractor={item => item._id}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingVertical: 8 }}
-      />
+      <View style={{ flex: 1 }}>
+        {/* Price Sync Banner at the top */}
+        <PriceSyncBanner />
+
+        <FlatList
+          data={shoppingLists}
+          keyExtractor={item => item._id}
+          renderItem={renderItem}
+          contentContainerStyle={{ 
+            paddingVertical: 8,
+            // Add extra padding at bottom to account for floating tab bar and add button
+            paddingBottom: insets.bottom + 120
+          }}
+          // Ensure scrolling works properly with the banner
+          showsVerticalScrollIndicator={true}
+          style={{ flex: 1 }}
+        />
+      </View>
 
       <TouchableHighlight
         onPress={addList}

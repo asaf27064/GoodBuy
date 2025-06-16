@@ -20,6 +20,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
+// Price Sync Context
+import { PriceSyncProvider } from './contexts/PriceSyncContext';
+
 // Theme
 import { Provider as PaperProvider, useTheme } from 'react-native-paper';
 import paperTheme from './theme/paperTheme';
@@ -120,7 +123,13 @@ function AuthStack() {
 function RootNavigator() {
   const { token, loading } = useAuth();
   if (loading) return null;
-  return token ? <AppDrawer /> : <AuthStack />;
+  return token ? (
+    <PriceSyncProvider>
+      <AppDrawer />
+    </PriceSyncProvider>
+  ) : (
+    <AuthStack />
+  );
 }
 
 export default function App() {
