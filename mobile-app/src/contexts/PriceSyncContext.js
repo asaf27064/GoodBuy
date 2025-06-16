@@ -1,20 +1,20 @@
 import React, {
   createContext, useState, useEffect, useCallback
 } from 'react';
-import AsyncStorage              from '@react-native-async-storage/async-storage';
-import axios                     from 'axios';
-import { Snackbar, useTheme }    from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { Snackbar, useTheme } from 'react-native-paper';
 
 export const PriceSyncContext = createContext();
 
 export function PriceSyncProvider({ children }) {
   const [lastSuccess, setLastSuccess] = useState(0);
-  const [syncing,     setSyncing]     = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  const [snack, setSnack] = useState({ visible:false, msg:'' });
+  const [snack, setSnack] = useState({ visible: false, msg: '' });
   const theme = useTheme();
   const showSnack = msg =>
-    setSnack({ visible:true, msg });
+    setSnack({ visible: true, msg });
 
   useEffect(() => {
     (async () => {
@@ -39,12 +39,12 @@ export function PriceSyncProvider({ children }) {
 
     try {
       const { data: st } = await axios.get('/api/system/price-status');
-      const last  = st.lastRunEnd ? +new Date(st.lastRunEnd) : 0;
-      const stale = !st.lastRunOk || (Date.now() - last > 24*60*60*1e3);
+      const last = st.lastRunEnd ? +new Date(st.lastRunEnd) : 0;
+      const stale = !st.lastRunOk || (Date.now() - last > 24 * 60 * 60 * 1e3);
 
-      if (!stale)                 { showSnack('Prices already up-to-date'); return false; }
-      if (st.running)             { showSnack('Refresh already running');  return false; }
-    } catch {}
+      if (!stale) { showSnack('Prices already up-to-date'); return false; }
+      if (st.running) { showSnack('Refresh already running'); return false; }
+    } catch { }
 
     setSyncing(true);
     await AsyncStorage.removeItem('priceLastSuccess');
@@ -72,7 +72,7 @@ export function PriceSyncProvider({ children }) {
           setSyncing(false);
           showSnack('Prices updated ✓');
         }
-      } catch {}
+      } catch { }
     }, 30_000);
 
     return true;
@@ -82,9 +82,10 @@ export function PriceSyncProvider({ children }) {
     <PriceSyncContext.Provider value={{ lastSuccess, syncing, triggerSync }}>
       {children}
 
+      {/* Keep the Snackbar here since it should be global */}
       <Snackbar
         visible={snack.visible}
-        onDismiss={() => setSnack({ ...snack, visible:false })}
+        onDismiss={() => setSnack({ ...snack, visible: false })}
         duration={3000}
         style={{ backgroundColor: theme.colors.inverseSurface }}
       >
