@@ -45,18 +45,30 @@ exports.updateListProducts = async (req, res) => {
     if (!list) return res.status(404).json({ error: 'List not found' })
     if (!list.members.map(id => id.toString()).includes(uid)) return res.status(403).json({ error: 'Not permitted' })
 
-    const ops = []
-    changes.forEach(c => {
-      if (c.action === 'added')
-        ops.push({ updateOne: { filter: { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } }, update: { $push: { products: { product: c.product, numUnits: 1 } } } } })
-      if (c.action === 'removed')
-        ops.push({ updateOne: { filter: { _id: listId }, update: { $pull: { products: { 'product.itemCode': c.product.itemCode } } } } })
-      if (c.action === 'updated')
-        ops.push({ updateOne: { filter: { _id: listId, 'products.product.itemCode': c.product.itemCode }, update: { $inc: { 'products.$.numUnits': c.difference } } } })
-    })
-    if (ops.length) {
-      ops.push({ updateOne: { filter: { _id: listId }, update: { $push: { editLog: { $each: changes } } } } })
-      await ShoppingList.bulkWrite(ops)
+    for (const c of changes) {
+      if (c.action === 'added') {
+        await ShoppingList.updateOne(
+          { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } },
+          { $push: { products: { product: c.product, numUnits: 1 } } }
+        )
+      }
+      if (c.action === 'removed') {
+        await ShoppingList.updateOne(
+          { _id: listId },
+          { $pull: { products: { 'product.itemCode': c.product.itemCode } } }
+        )
+      }
+      if (c.action === 'updated') {
+        await ShoppingList.updateOne(
+          { _id: listId },
+          { $inc: { 'products.$[p].numUnits': c.difference }, $max: { 'products.$[p].numUnits': 1 } },
+          { arrayFilters: [ { 'p.product.itemCode': c.product.itemCode } ] }
+        )
+      }
+    }
+
+    if (changes.length) {
+      await ShoppingList.updateOne({ _id: listId }, { $push: { editLog: { $each: changes } } })
     }
 
     const updated = await ShoppingList.findById(listId)
