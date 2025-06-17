@@ -67,7 +67,6 @@ export default function RecommendationsScreen({ route, navigation }) {
   };
 
   const handleAdd = (item) => {
-    // Convert recommendation item to the format expected by EditItems
     const selectedItem = {
       itemCode: item.itemCode,
       name: item.name,
@@ -75,7 +74,7 @@ export default function RecommendationsScreen({ route, navigation }) {
       category: item.category
     };
     
-    // Navigate back to EditItems with the item (using the old parameter method for recommendations)
+    // Navigate back to EditItems with the item
     navigation.navigate('EditItems', { 
       listObj,
       addedItem: selectedItem,
@@ -343,7 +342,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   toggleButton: {
-    // Removed position relative since we're not using badge anymore
   },
   sectionTitle: {
     fontWeight: 'bold',

@@ -37,14 +37,12 @@ export default function EditListScreen({ route, navigation }) {
     return () => { off('listUpdated', hUpd); off('listAck', hAck); stopEdit(listObj._id, { username: user.username, listId: listObj._id }); leaveList(listObj._id) }
   }, [listObj._id, joinList, leaveList, startEdit, stopEdit, on, off, user.username])
 
-  // Handle items from recommendations and other screens using params
   useFocusEffect(useCallback(() => {
     const add = route.params?.addedItem
     const timestamp = route.params?.timestamp
     
     if (add && timestamp) {
       console.log('📥 useFocusEffect: Adding item from params:', add.name)
-      // Check if item already exists
       const itemExists = products.some(x => x.product.itemCode === add.itemCode)
       if (itemExists) {
         console.log('⚠️ Item already in list:', add.name)
@@ -52,10 +50,8 @@ export default function EditListScreen({ route, navigation }) {
         return
       }
 
-      // Add the item to the list
       setProducts(p => [...p, { product: add, numUnits: 1 }])
       
-      // Push the change for real-time sync
       const id = pushChange({ 
         action: 'added', 
         product: add, 
@@ -66,7 +62,6 @@ export default function EditListScreen({ route, navigation }) {
       
       console.log('✅ Item added via useFocusEffect:', add.name)
       
-      // Clear the params
       navigation.setParams({ addedItem: undefined, timestamp: undefined })
     }
   }, [route.params?.addedItem, route.params?.timestamp, navigation, products, pushChange, saveChangesDebounced, user.username]))
@@ -81,18 +76,14 @@ export default function EditListScreen({ route, navigation }) {
   }
   const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 120), [])
 
-  // Callback function to handle item selection from AddItem screen
   const handleItemSelect = useCallback((selectedItem) => {
-    // Check if item already exists
     const itemExists = products.some(x => x.product.itemCode === selectedItem.itemCode)
     if (itemExists) {
       return
     }
 
-    // Add the item to the list
     setProducts(p => [...p, { product: selectedItem, numUnits: 1 }])
     
-    // Push the change for real-time sync
     const id = pushChange({ 
       action: 'added', 
       product: selectedItem, 
@@ -119,11 +110,9 @@ export default function EditListScreen({ route, navigation }) {
 
   const getItemLayout = useCallback((_, index) => ({ length: 100, offset: 100 * index, index }), [])
 
-  // Get editors excluding current user
   const editors = editingUsers[listObj._id]?.filter(u => u !== user.username) || []
   const hasEditors = editors.length > 0
 
-  // Editor banner component - only renders when there are editors
   const EditorBanner = () => {
     if (!hasEditors) return null
     
@@ -196,7 +185,6 @@ export default function EditListScreen({ route, navigation }) {
             icon="plus" 
             color={theme.colors.onPrimary} 
             onPress={() => {
-              // Set the callback in context before navigating
               setItemSelectCallback(handleItemSelect)
               navigation.navigate('AddItem', { listObj })
             }} 
@@ -206,7 +194,6 @@ export default function EditListScreen({ route, navigation }) {
     })
   }, [navigation, theme.colors.onPrimary, listObj, saving, handleItemSelect, setItemSelectCallback])
 
-  // Calculate dynamic padding based on whether editor banner is shown
   const topPadding = hasEditors ? insets.top + 44 : insets.top + 8
 
   return (
@@ -225,7 +212,7 @@ export default function EditListScreen({ route, navigation }) {
         removeClippedSubviews
         contentContainerStyle={{ 
           padding: 8, 
-          paddingTop: topPadding, // Dynamic padding
+          paddingTop: topPadding,
           paddingBottom: insets.bottom + 16 
         }}
       />

@@ -12,7 +12,7 @@ export const AddItemProvider = ({ children }) => {
   const callItemSelect = (item) => {
     if (callbackRef.current) {
       callbackRef.current(item)
-      callbackRef.current = null // Clear after use
+      callbackRef.current = null
     }
   }
   

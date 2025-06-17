@@ -42,14 +42,12 @@ export default function AddListModal({ isVisible, onClose, createList }) {
       .catch(console.error)
   }, [isVisible, user?.id])
 
-  // Reset search when modal closes
   useEffect(() => {
     if (!isVisible) {
       setSearchText('')
     }
   }, [isVisible])
 
-  // Filter users based on search text
   const filteredUsers = useMemo(() => {
     if (!searchText.trim()) return users
     

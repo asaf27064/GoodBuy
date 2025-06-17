@@ -40,7 +40,7 @@ export default function AddItemScreen({ route, navigation }) {
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
-  const [viewMode, setViewMode] = useState('list') // Changed default from 'grid' to 'list'
+  const [viewMode, setViewMode] = useState('list')
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -51,7 +51,6 @@ export default function AddItemScreen({ route, navigation }) {
   const slideAnim = useRef(new Animated.Value(50)).current
 
   useEffect(() => {
-    // Animate in on mount
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -65,7 +64,6 @@ export default function AddItemScreen({ route, navigation }) {
       }),
     ]).start()
 
-    // Focus search bar after animation
     setTimeout(() => searchBarRef.current?.focus(), 600)
   }, [])
 
@@ -83,13 +81,12 @@ export default function AddItemScreen({ route, navigation }) {
         const { data } = await axios.get(`/api/Products/search/${term}`)
         setResults(data.results || [])
         
-        // Extract unique categories
         const uniqueCategories = [...new Set(
           (data.results || [])
             .map(item => item.category)
             .filter(Boolean)
         )]
-        setCategories(uniqueCategories.slice(0, 6)) // Limit to 6 categories
+        setCategories(uniqueCategories.slice(0, 6))
       } catch (e) {
         console.error(e)
         setResults([])
@@ -103,7 +100,7 @@ export default function AddItemScreen({ route, navigation }) {
 
   const onChange = text => {
     setQuery(text)
-    setSelectedCategory(null) // Clear category filter when typing
+    setSelectedCategory(null)
     doSearch(text)
   }
 
@@ -117,7 +114,6 @@ export default function AddItemScreen({ route, navigation }) {
   }
 
   const handleItemSelect = (item) => {
-    // Add to recent searches
     setRecentSearches(prev => {
       const updated = [query, ...prev.filter(s => s !== query)].slice(0, 4)
       return updated
@@ -127,17 +123,14 @@ export default function AddItemScreen({ route, navigation }) {
       itemCode: item.itemCode,
       name: item.itemName,
       image: item.imageUrl,
-      category: item.category // Remove "|| 'General'" to avoid the label
+      category: item.category
     }
     
-    // Call the callback through context
     callItemSelect(selectedItem)
     
-    // Simply go back - clean and fast
     navigation.goBack()
   }
 
-  // Filter results by selected category
   const filteredResults = selectedCategory 
     ? results.filter(item => item.category === selectedCategory)
     : results
@@ -296,7 +289,7 @@ export default function AddItemScreen({ route, navigation }) {
           />
         </View>
 
-        {/* Recent Searches - Show when no query */}
+        {/* Recent Searches */}
         {!query && (
           <View style={styles.recentsContainer}>
             <Text style={[styles.recentsTitle, { color: theme.colors.onSurfaceVariant }]}>
@@ -318,7 +311,7 @@ export default function AddItemScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* Category Filters - Show when there are results */}
+        {/* Category Filters */}
         {categories.length > 0 && (
           <View style={styles.categoriesContainer}>
             <Text style={[styles.categoriesTitle, { color: theme.colors.onSurfaceVariant }]}>

@@ -20,11 +20,11 @@ export default function PriceSyncBanner() {
         padding: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        minHeight: 56, // Consistent height
+        minHeight: 56,
         zIndex: 1,
         elevation: 1,
       }}
-      pointerEvents="box-none" // Allow touches to pass through to children
+      pointerEvents="box-none"
     >
       <View style={{ width: 24, height: 24, marginRight: 8, justifyContent: 'center', alignItems: 'center' }}>
         {syncing ? (
