@@ -72,20 +72,72 @@ export default function EditListScreen({ route, navigation }) {
 
   const getItemLayout = useCallback((_, index) => ({ length: 100, offset: 100 * index, index }), [])
 
+  // Get editors excluding current user
   const editors = editingUsers[listObj._id]?.filter(u => u !== user.username) || []
-  const EditorBanner = () => (
-    editors.length ? (
-      <View style={{ position: 'absolute', top: insets.top + 4, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.elevation.level2 }}>
+  const hasEditors = editors.length > 0
+
+  // Editor banner component - only renders when there are editors
+  const EditorBanner = () => {
+    if (!hasEditors) return null
+    
+    return (
+      <View style={{ 
+        position: 'absolute', 
+        top: insets.top + 4, 
+        alignSelf: 'center', 
+        paddingHorizontal: 12, 
+        paddingVertical: 6, 
+        borderRadius: 24, 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: theme.colors.elevation.level2,
+        zIndex: 1000,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      }}>
         {editors.slice(0, 3).map((name, i) => (
-          <Avatar.Text key={name} size={24} label={name[0].toUpperCase()} style={{ marginLeft: i ? -8 : 0, backgroundColor: theme.colors.primaryContainer }} labelStyle={{ color: theme.colors.onPrimaryContainer, fontSize: 12 }} />
+          <Avatar.Text 
+            key={name} 
+            size={24} 
+            label={name[0].toUpperCase()} 
+            style={{ 
+              marginLeft: i ? -8 : 0, 
+              backgroundColor: theme.colors.primaryContainer 
+            }} 
+            labelStyle={{ 
+              color: theme.colors.onPrimaryContainer, 
+              fontSize: 12 
+            }} 
+          />
         ))}
         {editors.length > 3 && (
-          <Avatar.Text size={24} label={`+${editors.length - 3}`} style={{ marginLeft: -8, backgroundColor: theme.colors.secondaryContainer }} labelStyle={{ color: theme.colors.onSecondaryContainer, fontSize: 12 }} />
+          <Avatar.Text 
+            size={24} 
+            label={`+${editors.length - 3}`} 
+            style={{ 
+              marginLeft: -8, 
+              backgroundColor: theme.colors.secondaryContainer 
+            }} 
+            labelStyle={{ 
+              color: theme.colors.onSecondaryContainer, 
+              fontSize: 12 
+            }} 
+          />
         )}
-        <Text style={{ marginLeft: 8, color: theme.colors.onSurfaceVariant, fontSize: 12 }}>editing now</Text>
+        <Text style={{ 
+          marginLeft: 8, 
+          color: theme.colors.onSurfaceVariant, 
+          fontSize: 12,
+          fontWeight: '500'
+        }}>
+          {editors.length === 1 ? 'editing now' : 'editing now'}
+        </Text>
       </View>
-    ) : null
-  )
+    )
+  }
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -98,6 +150,9 @@ export default function EditListScreen({ route, navigation }) {
       )
     })
   }, [navigation, theme.colors.onPrimary, listObj, saving])
+
+  // Calculate dynamic padding based on whether editor banner is shown
+  const topPadding = hasEditors ? insets.top + 44 : insets.top + 8
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -113,10 +168,23 @@ export default function EditListScreen({ route, navigation }) {
         updateCellsBatchingPeriod={20}
         maxToRenderPerBatch={20}
         removeClippedSubviews
-        contentContainerStyle={{ padding: 8, paddingTop: insets.top + 44, paddingBottom: insets.bottom + 16 }}
+        contentContainerStyle={{ 
+          padding: 8, 
+          paddingTop: topPadding, // Dynamic padding
+          paddingBottom: insets.bottom + 16 
+        }}
       />
       {saving && (
-        <View style={{ padding: 8, backgroundColor: theme.colors.surfaceVariant, borderTopWidth: 1, borderColor: theme.colors.outline, paddingBottom: insets.bottom + 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ 
+          padding: 8, 
+          backgroundColor: theme.colors.surfaceVariant, 
+          borderTopWidth: 1, 
+          borderColor: theme.colors.outline, 
+          paddingBottom: insets.bottom + 8, 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
           <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
           <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>Saving...</Text>
         </View>

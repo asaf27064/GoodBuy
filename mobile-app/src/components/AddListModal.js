@@ -1,7 +1,4 @@
-// Alternative approach - use this if the current modal still has issues
-// This creates a portal that renders outside the normal component tree
-
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Modal,
   View,
@@ -15,6 +12,7 @@ import {
 } from 'react-native'
 import axios from 'axios'
 import { useTheme, Portal } from 'react-native-paper'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import globalStylesFactory from '../styles/globalStyles'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -29,6 +27,7 @@ export default function AddListModal({ isVisible, onClose, createList }) {
   const [users, setUsers] = useState([])
   const [selected, setSelected] = useState([])
   const [important, setImportant] = useState(false)
+  const [searchText, setSearchText] = useState('')
 
   useEffect(() => {
     if (!isVisible) return
@@ -43,6 +42,25 @@ export default function AddListModal({ isVisible, onClose, createList }) {
       .catch(console.error)
   }, [isVisible, user?.id])
 
+  // Reset search when modal closes
+  useEffect(() => {
+    if (!isVisible) {
+      setSearchText('')
+    }
+  }, [isVisible])
+
+  // Filter users based on search text
+  const filteredUsers = useMemo(() => {
+    if (!searchText.trim()) return users
+    
+    const searchLower = searchText.toLowerCase()
+    return users.filter(u => {
+      const username = (u.username || '').toLowerCase()
+      const email = (u.email || '').toLowerCase()
+      return username.includes(searchLower) || email.includes(searchLower)
+    })
+  }, [users, searchText])
+
   const toggleUser = id =>
     setSelected(s =>
       s.includes(id) ? s.filter(x => x !== id) : [...s, id]
@@ -54,6 +72,15 @@ export default function AddListModal({ isVisible, onClose, createList }) {
     setTitleText('')
     setSelected([])
     setImportant(false)
+    setSearchText('')
+    onClose()
+  }
+
+  const handleClose = () => {
+    setTitleText('')
+    setSelected([])
+    setImportant(false)
+    setSearchText('')
     onClose()
   }
 
@@ -64,7 +91,7 @@ export default function AddListModal({ isVisible, onClose, createList }) {
       <View style={styles.overlay}>
         <View style={[styles.modal, { backgroundColor: theme.colors.surface }]}>
           <TouchableHighlight 
-            onPress={onClose} 
+            onPress={handleClose} 
             style={styles.closeButton}
             underlayColor={theme.colors.surfaceVariant}
           >
@@ -89,10 +116,36 @@ export default function AddListModal({ isVisible, onClose, createList }) {
           <Text style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>
             Members
           </Text>
+
+          {/* Search Input */}
+          <View style={[styles.searchContainer, { borderColor: theme.colors.outline }]}>
+            <MaterialCommunityIcons 
+              name="magnify" 
+              size={20} 
+              color={theme.colors.onSurfaceVariant} 
+              style={styles.searchIcon}
+            />
+            <TextInput
+              placeholder="Search users by username or email..."
+              placeholderTextColor={theme.colors.onSurfaceVariant}
+              value={searchText}
+              onChangeText={setSearchText}
+              style={[styles.searchInput, { color: theme.colors.onSurface }]}
+            />
+            {searchText ? (
+              <TouchableOpacity onPress={() => setSearchText('')}>
+                <MaterialCommunityIcons 
+                  name="close-circle" 
+                  size={20} 
+                  color={theme.colors.onSurfaceVariant} 
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           
           <View style={styles.userListContainer}>
             <FlatList
-              data={users}
+              data={filteredUsers}
               keyExtractor={u => u._id}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
@@ -101,43 +154,83 @@ export default function AddListModal({ isVisible, onClose, createList }) {
                   textAlign: 'center', 
                   padding: 20 
                 }}>
-                  No other users found.
+                  {searchText ? 'No users found matching your search.' : 'No other users found.'}
                 </Text>
               }
               renderItem={({ item }) => {
                 const isSel = selected.includes(item._id)
+                const displayName = item.username || item.email
+                const secondaryText = item.username ? item.email : null
+                
                 return (
                   <TouchableOpacity
                     style={styles.userRow}
                     onPress={() => toggleUser(item._id)}
+                    activeOpacity={0.7}
                   >
                     <View
                       style={[styles.checkbox, {
                         borderColor: theme.colors.primary,
                         backgroundColor: isSel ? theme.colors.primary : 'transparent'
                       }]}
-                    />
-                    <Text style={{ 
-                      marginLeft: 8, 
-                      color: theme.colors.onSurface,
-                      flex: 1 
-                    }}>
-                      {item.username || item.email}
-                    </Text>
+                    >
+                      {isSel && (
+                        <MaterialCommunityIcons 
+                          name="check" 
+                          size={14} 
+                          color={theme.colors.onPrimary} 
+                        />
+                      )}
+                    </View>
+                    
+                    <View style={styles.userInfo}>
+                      <Text style={{ 
+                        color: theme.colors.onSurface,
+                        fontSize: 14,
+                        fontWeight: '500'
+                      }}>
+                        {displayName}
+                      </Text>
+                      {secondaryText && (
+                        <Text style={{ 
+                          color: theme.colors.onSurfaceVariant,
+                          fontSize: 12,
+                          marginTop: 2
+                        }}>
+                          {secondaryText}
+                        </Text>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 )
               }}
             />
           </View>
 
+          {/* Show selected count */}
+          {selected.length > 0 && (
+            <Text style={[styles.selectedCount, { color: theme.colors.primary }]}>
+              {selected.length} member{selected.length !== 1 ? 's' : ''} selected
+            </Text>
+          )}
+
           <TouchableOpacity 
             style={styles.importantRow}
             onPress={() => setImportant(b => !b)}
+            activeOpacity={0.7}
           >
             <View style={[styles.checkbox, {
               borderColor: theme.colors.primary,
               backgroundColor: important ? theme.colors.primary : 'transparent'
-            }]} />
+            }]}>
+              {important && (
+                <MaterialCommunityIcons 
+                  name="check" 
+                  size={14} 
+                  color={theme.colors.onPrimary} 
+                />
+              )}
+            </View>
             <Text style={{ marginLeft: 8, color: theme.colors.onSurface }}>
               Important List
             </Text>
@@ -145,13 +238,19 @@ export default function AddListModal({ isVisible, onClose, createList }) {
 
           <TouchableHighlight 
             onPress={onSubmit} 
-            style={[styles.button, { backgroundColor: theme.colors.primary }]}
+            style={[
+              styles.button, 
+              { 
+                backgroundColor: titleText.trim() ? theme.colors.primary : theme.colors.surfaceVariant,
+                opacity: titleText.trim() ? 1 : 0.6
+              }
+            ]}
             disabled={!titleText.trim()}
+            underlayColor={theme.colors.primaryContainer}
           >
             <Text style={{ 
-              color: theme.colors.onPrimary,
-              fontWeight: '600',
-              opacity: titleText.trim() ? 1 : 0.5
+              color: titleText.trim() ? theme.colors.onPrimary : theme.colors.onSurfaceVariant,
+              fontWeight: '600'
             }}>
               Create List
             </Text>
@@ -175,9 +274,9 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   modal: {
-    width: screenWidth * 0.85,
-    maxWidth: 400,
-    maxHeight: screenHeight * 0.8,
+    width: screenWidth * 0.9,
+    maxWidth: 420,
+    maxHeight: screenHeight * 0.85,
     padding: 24,
     borderRadius: 16,
     elevation: 20,
@@ -211,9 +310,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 14,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 4,
+  },
   userListContainer: {
-    maxHeight: 180,
-    marginBottom: 20,
+    maxHeight: 200,
+    marginBottom: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
@@ -230,7 +346,19 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderRadius: 4
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  selectedCount: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   importantRow: {
     flexDirection: 'row',
