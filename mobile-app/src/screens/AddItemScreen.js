@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import {
   View,
   FlatList,
@@ -6,203 +6,528 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions
+  Dimensions,
+  Animated,
+  StatusBar
 } from 'react-native'
 import {
   Searchbar,
   IconButton,
-  useTheme
+  useTheme,
+  ActivityIndicator,
+  Chip,
+  Surface
 } from 'react-native-paper'
 import debounce from 'lodash/debounce'
 import axios from 'axios'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import { MotiView, AnimatePresence } from 'moti'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useAddItem } from '../contexts/AddItemContext'
 import { API_BASE } from '../config'
 
 axios.defaults.baseURL = API_BASE
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 const CARD_MARGIN = 8
-const CARD_WIDTH = (SCREEN_WIDTH - CARD_MARGIN * 3) / 2  // two columns
+const CARD_WIDTH = (SCREEN_WIDTH - CARD_MARGIN * 3) / 2
 
 export default function AddItemScreen({ route, navigation }) {
   const theme = useTheme()
+  const insets = useSafeAreaInsets()
   const { listObj } = route.params
+  const { callItemSelect } = useAddItem()
 
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState([])
-  const [viewMode, setViewMode] = useState('list') // 'list' or 'grid'
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [viewMode, setViewMode] = useState('list') // Changed default from 'grid' to 'list'
+  const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [recentSearches, setRecentSearches] = useState(['חלב', 'לחם', 'ביצים', 'עוף'])
+  
+  const searchBarRef = useRef(null)
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(50)).current
+
+  useEffect(() => {
+    // Animate in on mount
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start()
+
+    // Focus search bar after animation
+    setTimeout(() => searchBarRef.current?.focus(), 600)
+  }, [])
 
   const doSearch = useCallback(
     debounce(async term => {
       if (!term.trim()) {
         setResults([])
+        setCategories([])
+        setLoading(false)
         return
       }
+      
+      setLoading(true)
       try {
         const { data } = await axios.get(`/api/Products/search/${term}`)
-        setResults(data.results)
+        setResults(data.results || [])
+        
+        // Extract unique categories
+        const uniqueCategories = [...new Set(
+          (data.results || [])
+            .map(item => item.category)
+            .filter(Boolean)
+        )]
+        setCategories(uniqueCategories.slice(0, 6)) // Limit to 6 categories
       } catch (e) {
         console.error(e)
+        setResults([])
+        setCategories([])
+      } finally {
+        setLoading(false)
       }
-    }, 300),
+    }, 400),
     []
   )
 
   const onChange = text => {
     setQuery(text)
+    setSelectedCategory(null) // Clear category filter when typing
     doSearch(text)
   }
 
+  const handleRecentSearch = (term) => {
+    setQuery(term)
+    doSearch(term)
+  }
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(selectedCategory === category ? null : category)
+  }
+
   const handleItemSelect = (item) => {
+    // Add to recent searches
+    setRecentSearches(prev => {
+      const updated = [query, ...prev.filter(s => s !== query)].slice(0, 4)
+      return updated
+    })
+
     const selectedItem = {
       itemCode: item.itemCode,
       name: item.itemName,
       image: item.imageUrl,
-      category: item.category || 'General' // Add category if available
+      category: item.category // Remove "|| 'General'" to avoid the label
     }
     
-    // Use navigation.setParams on the previous screen and then go back
-    navigation.navigate('EditItems', {
-      listObj,
-      addedItem: selectedItem
-    })
+    // Call the callback through context
+    callItemSelect(selectedItem)
+    
+    // Simply go back - clean and fast
+    navigation.goBack()
   }
+
+  // Filter results by selected category
+  const filteredResults = selectedCategory 
+    ? results.filter(item => item.category === selectedCategory)
+    : results
 
   const Thumbnail = ({ uri, style }) => {
     const [error, setError] = useState(false)
+    const [imageLoading, setImageLoading] = useState(true)
+    
     if (!uri || error) {
       return (
-        <View style={[style, { justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surfaceVariant }]}>
+        <View style={[style, { 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          backgroundColor: theme.colors.surfaceVariant 
+        }]}>
           <MaterialCommunityIcons
             name="image-off-outline"
-            size={24}
+            size={viewMode === 'grid' ? 32 : 24}
             color={theme.colors.onSurfaceDisabled}
           />
         </View>
       )
     }
+    
     return (
-      <Image
-        source={{ uri }}
-        style={style}
-        onError={() => setError(true)}
-        resizeMode="cover"
-      />
+      <View style={style}>
+        {imageLoading && (
+          <View style={[StyleSheet.absoluteFill, { 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            backgroundColor: theme.colors.surfaceVariant 
+          }]}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          </View>
+        )}
+        <Image
+          source={{ uri }}
+          style={[style, { position: imageLoading ? 'absolute' : 'relative' }]}
+          onError={() => setError(true)}
+          onLoad={() => setImageLoading(false)}
+          resizeMode="cover"
+        />
+      </View>
     )
   }
 
-  const renderListItem = ({ item }) => (
+  const renderListItem = ({ item, index }) => (
     <TouchableOpacity
-      style={styles.listRow}
+      style={[styles.listRow, { backgroundColor: theme.colors.surface }]}
       onPress={() => handleItemSelect(item)}
+      activeOpacity={0.7}
     >
       <Thumbnail uri={item.imageUrl} style={styles.listThumb} />
       <View style={styles.listText}>
-        <Text style={[styles.title, { color: theme.colors.onBackground }]}>
+        <Text style={[styles.title, { color: theme.colors.onSurface }]}>
           {item.itemName}
         </Text>
-        <Text style={{ color: theme.colors.onBackgroundDisabled }}>
-          Code: {item.itemCode}
+        <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+          {item.category ? `${item.category} • ` : ''}Code: {item.itemCode}
         </Text>
+      </View>
+      <MaterialCommunityIcons 
+        name="plus-circle-outline" 
+        size={24} 
+        color={theme.colors.primary} 
+      />
+    </TouchableOpacity>
+  )
+
+  const renderGridItem = ({ item, index }) => (
+    <TouchableOpacity
+      style={[styles.cardContainer, { 
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.outline,
+      }]}
+      onPress={() => handleItemSelect(item)}
+      activeOpacity={0.8}
+    >
+      <Thumbnail uri={item.imageUrl} style={styles.cardImage} />
+      <View style={styles.cardContent}>
+        <Text
+          style={[styles.cardTitle, { color: theme.colors.onSurface }]}
+          numberOfLines={2}
+        >
+          {item.itemName}
+        </Text>
+        {item.category && (
+          <Text style={[styles.cardCategory, { color: theme.colors.onSurfaceVariant }]}>
+            {item.category}
+          </Text>
+        )}
+      </View>
+      <View style={[styles.addButton, { backgroundColor: theme.colors.primary }]}>
+        <MaterialCommunityIcons name="plus" size={16} color={theme.colors.onPrimary} />
       </View>
     </TouchableOpacity>
   )
 
-  const renderCardItem = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.cardContainer, { backgroundColor: theme.colors.surface }]}
-      onPress={() => handleItemSelect(item)}
-    >
-      <Thumbnail uri={item.imageUrl} style={styles.cardImage} />
-      <Text
-        style={[styles.cardTitle, { color: theme.colors.onBackground }]}
-        numberOfLines={2}
-      >
-        {item.itemName}
+  const EmptyState = () => (
+    <View style={styles.emptyState}>
+      <MaterialCommunityIcons 
+        name={query ? "magnify-close" : "magnify"} 
+        size={64} 
+        color={theme.colors.onSurfaceDisabled} 
+      />
+      <Text style={[styles.emptyTitle, { color: theme.colors.onSurface }]}>
+        {query ? 'No items found' : 'Search for products'}
       </Text>
-    </TouchableOpacity>
+      <Text style={[styles.emptySubtitle, { color: theme.colors.onSurfaceVariant }]}>
+        {query 
+          ? `Try searching for "${query}" differently` 
+          : 'Start typing to find products to add to your list'
+        }
+      </Text>
+    </View>
   )
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.searchRow}>
-        <Searchbar
-          placeholder="Search for item"
-          onChangeText={onChange}
-          value={query}
-          style={[styles.searchbar, { backgroundColor: theme.colors.surface }]}
-        />
-        <IconButton
-          icon={viewMode === 'list' ? 'view-grid-outline' : 'format-list-bulleted'}
-          size={24}
-          color={theme.colors.onSurface}
-          onPress={() =>
-            setViewMode(prev => (prev === 'list' ? 'grid' : 'list'))
+      <StatusBar 
+        backgroundColor={theme.colors.surface} 
+        barStyle={theme.dark ? 'light-content' : 'dark-content'} 
+      />
+      
+      {/* Enhanced Search Header */}
+      <Animated.View 
+        style={[
+          styles.searchHeader, 
+          { 
+            backgroundColor: theme.colors.surface,
+            paddingTop: insets.top,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
           }
-        />
-      </View>
+        ]}
+      >
+        <View style={styles.searchRow}>
+          <Searchbar
+            ref={searchBarRef}
+            placeholder="Search for products..."
+            onChangeText={onChange}
+            value={query}
+            style={[styles.searchbar, { backgroundColor: theme.colors.surfaceVariant }]}
+            inputStyle={{ color: theme.colors.onSurface }}
+            iconColor={theme.colors.onSurfaceVariant}
+            placeholderTextColor={theme.colors.onSurfaceVariant}
+            loading={loading}
+            elevation={0}
+          />
+          <IconButton
+            icon={viewMode === 'list' ? 'view-grid' : 'format-list-bulleted'}
+            size={24}
+            iconColor={theme.colors.onSurface}
+            style={[styles.viewToggle, { backgroundColor: theme.colors.surfaceVariant }]}
+            onPress={() => setViewMode(prev => (prev === 'list' ? 'grid' : 'list'))}
+          />
+        </View>
 
+        {/* Recent Searches - Show when no query */}
+        {!query && (
+          <View style={styles.recentsContainer}>
+            <Text style={[styles.recentsTitle, { color: theme.colors.onSurfaceVariant }]}>
+              Recent searches
+            </Text>
+            <View style={styles.chipsRow}>
+              {recentSearches.map((term, index) => (
+                <Chip
+                  key={index}
+                  mode="outlined"
+                  onPress={() => handleRecentSearch(term)}
+                  style={[styles.chip, { borderColor: theme.colors.outline }]}
+                  textStyle={{ color: theme.colors.onSurface }}
+                >
+                  {term}
+                </Chip>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Category Filters - Show when there are results */}
+        {categories.length > 0 && (
+          <View style={styles.categoriesContainer}>
+            <Text style={[styles.categoriesTitle, { color: theme.colors.onSurfaceVariant }]}>
+              Filter by category
+            </Text>
+            <FlatList
+              horizontal
+              data={categories}
+              keyExtractor={(item, index) => index.toString()}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <Chip
+                  mode={selectedCategory === item ? 'flat' : 'outlined'}
+                  selected={selectedCategory === item}
+                  onPress={() => handleCategorySelect(item)}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategory === item && { backgroundColor: theme.colors.primary }
+                  ]}
+                  textStyle={{ 
+                    color: selectedCategory === item 
+                      ? theme.colors.onPrimary 
+                      : theme.colors.onSurface 
+                  }}
+                >
+                  {item}
+                </Chip>
+              )}
+            />
+          </View>
+        )}
+      </Animated.View>
+
+      {/* Results List */}
       <FlatList
-        key={viewMode}
-        data={results}
+        key={`${viewMode}-${selectedCategory}`}
+        data={filteredResults}
         keyExtractor={(item, i) => `${item.itemCode}_${i}`}
-        renderItem={viewMode === 'list' ? renderListItem : renderCardItem}
+        renderItem={viewMode === 'list' ? renderListItem : renderGridItem}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          filteredResults.length === 0 && styles.emptyList
+        ]}
         numColumns={viewMode === 'grid' ? 2 : 1}
+        ListEmptyComponent={!loading ? EmptyState : null}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1 
+  },
+  searchHeader: {
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    paddingBottom: 12,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 8,
   },
   searchbar: {
     flex: 1,
-    elevation: 2
+    elevation: 0,
+    borderRadius: 12,
+  },
+  viewToggle: {
+    borderRadius: 12,
+  },
+  recentsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  recentsTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  chip: {
+    marginRight: 0,
+  },
+  categoriesContainer: {
+    paddingTop: 12,
+  },
+  categoriesTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+    marginLeft: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  categoryChip: {
+    marginLeft: 8,
+    marginRight: 0,
   },
   list: {
-    paddingBottom: 16
+    paddingBottom: 16,
+    paddingTop: 8,
+  },
+  emptyList: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12
+    padding: 16,
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   listThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 4
+    width: 56,
+    height: 56,
+    borderRadius: 8,
   },
   listText: {
-    marginLeft: 12,
-    flex: 1
+    marginLeft: 16,
+    flex: 1,
   },
   title: {
     fontSize: 16,
-    fontWeight: '500'
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  subtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    lineHeight: 18,
   },
   cardContainer: {
     width: CARD_WIDTH,
     margin: CARD_MARGIN,
-    borderRadius: 8,
+    borderRadius: 16,
     elevation: 2,
-    padding: 8
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   cardImage: {
     width: '100%',
-    height: CARD_WIDTH,
-    borderRadius: 4,
-    backgroundColor: '#eee'
+    height: CARD_WIDTH * 0.7,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  cardContent: {
+    padding: 12,
   },
   cardTitle: {
-    marginTop: 8,
     fontSize: 14,
-    fontWeight: '500'
-  }
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  cardCategory: {
+    fontSize: 11,
+    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  addButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+  },
 })

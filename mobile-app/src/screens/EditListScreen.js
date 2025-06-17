@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import EditListScreenItem from '../components/EditListScreenItem'
 import { useAuth } from '../contexts/AuthContext'
 import { useListSocket } from '../contexts/ListSocketContext'
+import { useAddItem } from '../contexts/AddItemContext'
 import { API_BASE } from '../config'
 axios.defaults.baseURL = API_BASE
 
@@ -21,6 +22,7 @@ export default function EditListScreen({ route, navigation }) {
   const [saving, setSaving] = useState(false)
   const { user } = useAuth()
   const { joinList, leaveList, startEdit, stopEdit, on, off, editingUsers } = useListSocket()
+  const { setItemSelectCallback } = useAddItem()
   const pendingMap = useRef(new Map())
 
   const rand = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -35,15 +37,39 @@ export default function EditListScreen({ route, navigation }) {
     return () => { off('listUpdated', hUpd); off('listAck', hAck); stopEdit(listObj._id, { username: user.username, listId: listObj._id }); leaveList(listObj._id) }
   }, [listObj._id, joinList, leaveList, startEdit, stopEdit, on, off, user.username])
 
+  // Handle items from recommendations and other screens using params
   useFocusEffect(useCallback(() => {
     const add = route.params?.addedItem
-    if (add) {
-      setProducts(p => (p.some(x => x.product.itemCode === add.itemCode) ? p : [...p, { product: add, numUnits: 1 }]))
-      const id = pushChange({ action: 'added', product: add, timeStamp: new Date(), changedBy: user.username })
+    const timestamp = route.params?.timestamp
+    
+    if (add && timestamp) {
+      console.log('📥 useFocusEffect: Adding item from params:', add.name)
+      // Check if item already exists
+      const itemExists = products.some(x => x.product.itemCode === add.itemCode)
+      if (itemExists) {
+        console.log('⚠️ Item already in list:', add.name)
+        navigation.setParams({ addedItem: undefined, timestamp: undefined })
+        return
+      }
+
+      // Add the item to the list
+      setProducts(p => [...p, { product: add, numUnits: 1 }])
+      
+      // Push the change for real-time sync
+      const id = pushChange({ 
+        action: 'added', 
+        product: add, 
+        timeStamp: new Date(), 
+        changedBy: user.username 
+      })
       saveChangesDebounced(id)
-      navigation.setParams({ addedItem: undefined })
+      
+      console.log('✅ Item added via useFocusEffect:', add.name)
+      
+      // Clear the params
+      navigation.setParams({ addedItem: undefined, timestamp: undefined })
     }
-  }, [route.params?.addedItem, navigation, user.username]))
+  }, [route.params?.addedItem, route.params?.timestamp, navigation, products, pushChange, saveChangesDebounced, user.username]))
 
   const saveChanges = async id => {
     const e = pendingMap.current.get(id)
@@ -54,6 +80,27 @@ export default function EditListScreen({ route, navigation }) {
     finally { pendingMap.current.delete(id); setSaving(pendingMap.current.size > 0) }
   }
   const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 120), [])
+
+  // Callback function to handle item selection from AddItem screen
+  const handleItemSelect = useCallback((selectedItem) => {
+    // Check if item already exists
+    const itemExists = products.some(x => x.product.itemCode === selectedItem.itemCode)
+    if (itemExists) {
+      return
+    }
+
+    // Add the item to the list
+    setProducts(p => [...p, { product: selectedItem, numUnits: 1 }])
+    
+    // Push the change for real-time sync
+    const id = pushChange({ 
+      action: 'added', 
+      product: selectedItem, 
+      timeStamp: new Date(), 
+      changedBy: user.username 
+    })
+    saveChangesDebounced(id)
+  }, [products, pushChange, saveChangesDebounced, user.username])
 
   const removeProduct = useCallback(item => {
     const id = pushChange({ action: 'removed', product: item.product, timeStamp: new Date(), changedBy: user.username })
@@ -145,11 +192,19 @@ export default function EditListScreen({ route, navigation }) {
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {saving && <ActivityIndicator size={16} color={theme.colors.onPrimary} style={{ marginRight: 8 }} />}
-          <IconButton icon="plus" color={theme.colors.onPrimary} onPress={() => navigation.navigate('AddItem', { listObj })} />
+          <IconButton 
+            icon="plus" 
+            color={theme.colors.onPrimary} 
+            onPress={() => {
+              // Set the callback in context before navigating
+              setItemSelectCallback(handleItemSelect)
+              navigation.navigate('AddItem', { listObj })
+            }} 
+          />
         </View>
       )
     })
-  }, [navigation, theme.colors.onPrimary, listObj, saving])
+  }, [navigation, theme.colors.onPrimary, listObj, saving, handleItemSelect, setItemSelectCallback])
 
   // Calculate dynamic padding based on whether editor banner is shown
   const topPadding = hasEditors ? insets.top + 44 : insets.top + 8

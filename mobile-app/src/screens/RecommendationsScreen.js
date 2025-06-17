@@ -66,8 +66,22 @@ export default function RecommendationsScreen({ route, navigation }) {
     setShowingExtra(!showingExtra);
   };
 
-  const handleAdd = (item) =>
-    navigation.navigate('EditItems', { addedItem: item, listObj });
+  const handleAdd = (item) => {
+    // Convert recommendation item to the format expected by EditItems
+    const selectedItem = {
+      itemCode: item.itemCode,
+      name: item.name,
+      image: item.image,
+      category: item.category
+    };
+    
+    // Navigate back to EditItems with the item (using the old parameter method for recommendations)
+    navigation.navigate('EditItems', { 
+      listObj,
+      addedItem: selectedItem,
+      timestamp: Date.now()
+    });
+  };
     
   const handleDismiss = (code, isSupplementary = false, isAI = false) => {
     if (isSupplementary) {

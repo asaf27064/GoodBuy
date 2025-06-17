@@ -24,6 +24,9 @@ import RegisterScreen from './screens/RegisterScreen';
 import { PriceSyncProvider } from './contexts/PriceSyncContext';
 import { ListSocketProvider } from './contexts/ListSocketContext'
 
+// Add Item Context
+import { AddItemProvider } from './contexts/AddItemContext';
+
 
 // Theme
 import { Provider as PaperProvider, useTheme } from 'react-native-paper';
@@ -127,9 +130,11 @@ function RootNavigator() {
   return token ? (
     <ListSocketProvider>
       <PriceSyncProvider>
+         <AddItemProvider>
         <AppDrawer />
-      </PriceSyncProvider>
-    </ListSocketProvider>
+      </AddItemProvider>
+    </PriceSyncProvider>
+  </ListSocketProvider>
   ) : (
     <AuthStack />
   )
