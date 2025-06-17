@@ -1,7 +1,7 @@
-import React, { useState, useRef, useLayoutEffect, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { SafeAreaView, FlatList, View, Text, ActivityIndicator } from 'react-native'
-import { useTheme, IconButton } from 'react-native-paper'
+import { useTheme, IconButton, Avatar } from 'react-native-paper'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native'
 import EditListScreenItem from '../components/EditListScreenItem'
@@ -72,6 +72,21 @@ export default function EditListScreen({ route, navigation }) {
 
   const getItemLayout = useCallback((_, index) => ({ length: 100, offset: 100 * index, index }), [])
 
+  const editors = editingUsers[listObj._id]?.filter(u => u !== user.username) || []
+  const EditorBanner = () => (
+    editors.length ? (
+      <View style={{ position: 'absolute', top: insets.top + 4, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.elevation.level2 }}>
+        {editors.slice(0, 3).map((name, i) => (
+          <Avatar.Text key={name} size={24} label={name[0].toUpperCase()} style={{ marginLeft: i ? -8 : 0, backgroundColor: theme.colors.primaryContainer }} labelStyle={{ color: theme.colors.onPrimaryContainer, fontSize: 12 }} />
+        ))}
+        {editors.length > 3 && (
+          <Avatar.Text size={24} label={`+${editors.length - 3}`} style={{ marginLeft: -8, backgroundColor: theme.colors.secondaryContainer }} labelStyle={{ color: theme.colors.onSecondaryContainer, fontSize: 12 }} />
+        )}
+        <Text style={{ marginLeft: 8, color: theme.colors.onSurfaceVariant, fontSize: 12 }}>editing now</Text>
+      </View>
+    ) : null
+  )
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => <IconButton icon="arrow-left" color={theme.colors.onPrimary} onPress={() => navigation.navigate('My Shopping Lists')} />,
@@ -86,6 +101,7 @@ export default function EditListScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <EditorBanner />
       <FlatList
         data={products}
         extraData={products}
@@ -97,17 +113,12 @@ export default function EditListScreen({ route, navigation }) {
         updateCellsBatchingPeriod={20}
         maxToRenderPerBatch={20}
         removeClippedSubviews
-        contentContainerStyle={{ padding: 8, paddingBottom: insets.bottom + 16 }}
+        contentContainerStyle={{ padding: 8, paddingTop: insets.top + 44, paddingBottom: insets.bottom + 16 }}
       />
       {saving && (
         <View style={{ padding: 8, backgroundColor: theme.colors.surfaceVariant, borderTopWidth: 1, borderColor: theme.colors.outline, paddingBottom: insets.bottom + 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
           <Text style={{ fontSize: 12, color: theme.colors.onSurfaceVariant }}>Saving...</Text>
-        </View>
-      )}
-      {editingUsers[listObj._id]?.length > 0 && (
-        <View style={{ position: 'absolute', top: 0, width: '100%', alignItems: 'center', padding: 4, backgroundColor: theme.colors.inverseOnSurface }}>
-          <Text style={{ color: theme.colors.inverseSurface, fontSize: 12 }}>{editingUsers[listObj._id].join(', ')} editing now</Text>
         </View>
       )}
     </SafeAreaView>
