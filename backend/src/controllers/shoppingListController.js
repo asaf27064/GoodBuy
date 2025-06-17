@@ -46,24 +46,28 @@ exports.updateListProducts = async (req, res) => {
     if (!list.members.map(id => id.toString()).includes(uid)) return res.status(403).json({ error: 'Not permitted' })
 
     for (const c of changes) {
-      if (c.action === 'added') {
-        await ShoppingList.updateOne(
-          { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } },
-          { $push: { products: { product: c.product, numUnits: 1 } } }
-        )
-      }
-      if (c.action === 'removed') {
-        await ShoppingList.updateOne(
-          { _id: listId },
-          { $pull: { products: { 'product.itemCode': c.product.itemCode } } }
-        )
-      }
+      try {
+        if (c.action === 'added') {
+          await ShoppingList.updateOne(
+            { _id: listId, 'products.product.itemCode': { $ne: c.product.itemCode } },
+            { $push: { products: { product: c.product, numUnits: 1 } } }
+          )
+        }
+        if (c.action === 'removed') {
+          await ShoppingList.updateOne(
+            { _id: listId },
+            { $pull: { products: { 'product.itemCode': c.product.itemCode } } }
+          )
+        }
       if (c.action === 'updated') {
         await ShoppingList.updateOne(
-          { _id: listId },
-          { $inc: { 'products.$[p].numUnits': c.difference }, $max: { 'products.$[p].numUnits': 1 } },
-          { arrayFilters: [ { 'p.product.itemCode': c.product.itemCode } ] }
+          { _id: listId, 'products.product.itemCode': c.product.itemCode },
+          { $inc: { 'products.$.numUnits': c.difference } }
         )
+      }
+        if (c.ackId) global.io.to(`user:${uid}`).emit('listAck', { ackId: c.ackId, status: 'ok' })
+      } catch (err) {
+        if (c.ackId) global.io.to(`user:${uid}`).emit('listAck', { ackId: c.ackId, status: 'error' })
       }
     }
 

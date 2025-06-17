@@ -10,13 +10,7 @@ import { useListSocket } from '../contexts/ListSocketContext'
 import { API_BASE } from '../config'
 axios.defaults.baseURL = API_BASE
 
-function debounce(f, ms) {
-  let t
-  return (...a) => {
-    clearTimeout(t)
-    t = setTimeout(() => f(...a), ms)
-  }
-}
+function debounce(f, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms) } }
 
 export default function EditListScreen({ route, navigation }) {
   const theme = useTheme()
@@ -27,70 +21,60 @@ export default function EditListScreen({ route, navigation }) {
   const [saving, setSaving] = useState(false)
   const { user } = useAuth()
   const { joinList, leaveList, startEdit, stopEdit, on, off, editingUsers } = useListSocket()
-  const pendingRef = useRef([])
+  const pendingMap = useRef(new Map())
 
-  const pushChange = c => pendingRef.current.push(c)
+  const rand = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
+
+  const pushChange = c => {
+    const ackId = rand()
+    pendingMap.current.set(ackId, { change: { ...c, ackId }, snapshot: products })
+    return ackId
+  }
 
   useEffect(() => {
     joinList(listObj._id)
     startEdit(listObj._id, { username: user.username, listId: listObj._id })
-    const handle = data => {
-      if (data._id !== listObj._id) return
-      setListObj(data)
-      setProducts(data.products || [])
-    }
-    on('listUpdated', handle)
-    return () => {
-      off('listUpdated', handle)
-      stopEdit(listObj._id, { username: user.username, listId: listObj._id })
-      leaveList(listObj._id)
-    }
+    const hUpd = data => { if (data._id === listObj._id) { setListObj(data); setProducts(data.products || []) } }
+    const hAck = a => { if (pendingMap.current.has(a.ackId)) { if (a.status === 'error') { const snap = pendingMap.current.get(a.ackId).snapshot; setProducts(snap) } pendingMap.current.delete(a.ackId) } }
+    on('listUpdated', hUpd)
+    on('listAck', hAck)
+    return () => { off('listUpdated', hUpd); off('listAck', hAck); stopEdit(listObj._id, { username: user.username, listId: listObj._id }); leaveList(listObj._id) }
   }, [listObj._id, joinList, leaveList, startEdit, stopEdit, on, off, user.username])
 
   useFocusEffect(
     useCallback(() => {
-      const added = route.params?.addedItem
-      if (added) {
-        setProducts(p => {
-          if (p.some(x => x.product.itemCode === added.itemCode)) return p
-          pushChange({ action: 'added', product: added, timeStamp: new Date(), changedBy: user.username })
-          return [...p, { product: added, numUnits: 1 }]
-        })
+      const add = route.params?.addedItem
+      if (add) {
+        setProducts(p => { if (p.some(x => x.product.itemCode === add.itemCode)) return p; return [...p, { product: add, numUnits: 1 }] })
+        const ackId = pushChange({ action: 'added', product: add, timeStamp: new Date(), changedBy: user.username })
+        saveChangesDebounced(ackId)
         navigation.setParams({ addedItem: undefined })
       }
     }, [route.params?.addedItem, navigation, user.username])
   )
 
-  const saveChanges = async () => {
-    const changes = pendingRef.current
-    if (!changes.length) return
+  const saveChanges = async ackId => {
+    const entry = pendingMap.current.get(ackId)
+    if (!entry) return
     setSaving(true)
-    pendingRef.current = []
-    try {
-      await axios.put(`/api/ShoppingLists/${listObj._id}`, { changes })
-    } catch (e) {
-      console.error(e)
-      pendingRef.current.unshift(...changes)
-    } finally {
-      setSaving(false)
-    }
+    try { await axios.put(`/api/ShoppingLists/${listObj._id}`, { changes: [entry.change] }) } catch { pendingMap.current.delete(ackId); setProducts(entry.snapshot) } finally { setSaving(false) }
   }
 
-  const debouncedSave = useCallback(debounce(saveChanges, 150), [])
+  const saveChangesDebounced = useCallback(debounce(id => saveChanges(id), 120), [])
 
   const removeProduct = useCallback(item => {
+    const ackId = pushChange({ action: 'removed', product: item.product, timeStamp: new Date(), changedBy: user.username })
     setProducts(p => p.filter(x => x !== item))
-    pushChange({ action: 'removed', product: item.product, timeStamp: new Date(), changedBy: user.username })
-    debouncedSave()
-  }, [debouncedSave, user.username])
+    saveChangesDebounced(ackId)
+  }, [saveChangesDebounced, user.username])
 
   const updateQty = useCallback((item, qty) => {
-    setProducts(p => p.map(x => (x === item ? { ...x, numUnits: qty } : x)))
     const diff = qty - item.numUnits
-    if (diff)
-      pushChange({ action: 'updated', product: item.product, difference: diff, timeStamp: new Date(), changedBy: user.username })
-    debouncedSave()
-  }, [debouncedSave, user.username])
+    if (!diff) return
+    const ackId = pushChange({ action: 'updated', product: item.product, difference: diff, timeStamp: new Date(), changedBy: user.username })
+    setProducts(p => p.map(x => (x === item ? { ...x, numUnits: qty } : x)))
+    saveChangesDebounced(ackId)
+  }, [saveChangesDebounced, user.username])
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -103,8 +87,6 @@ export default function EditListScreen({ route, navigation }) {
       )
     })
   }, [navigation, theme.colors.onPrimary, listObj, saving])
-
-  useEffect(() => { if (pendingRef.current.length) debouncedSave() }, [products, debouncedSave])
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
