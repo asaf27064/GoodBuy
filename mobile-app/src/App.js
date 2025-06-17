@@ -22,6 +22,11 @@ import RegisterScreen from './screens/RegisterScreen';
 
 // Price Sync Context
 import { PriceSyncProvider } from './contexts/PriceSyncContext';
+import { ListSocketProvider } from './contexts/ListSocketContext'
+
+// Add Item Context
+import { AddItemProvider } from './contexts/AddItemContext';
+
 
 // Theme
 import { Provider as PaperProvider, useTheme } from 'react-native-paper';
@@ -32,7 +37,6 @@ import { API_BASE } from './config';
 
 MaterialCommunityIcons.loadFont();
 axios.defaults.baseURL = API_BASE;
-const socket = io(API_BASE);
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -121,15 +125,19 @@ function AuthStack() {
 
 // Root
 function RootNavigator() {
-  const { token, loading } = useAuth();
-  if (loading) return null;
+  const { token, loading } = useAuth()
+  if (loading) return null
   return token ? (
-    <PriceSyncProvider>
-      <AppDrawer />
+    <ListSocketProvider>
+      <PriceSyncProvider>
+         <AddItemProvider>
+        <AppDrawer />
+      </AddItemProvider>
     </PriceSyncProvider>
+  </ListSocketProvider>
   ) : (
     <AuthStack />
-  );
+  )
 }
 
 export default function App() {

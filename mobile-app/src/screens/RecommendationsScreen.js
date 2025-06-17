@@ -66,8 +66,21 @@ export default function RecommendationsScreen({ route, navigation }) {
     setShowingExtra(!showingExtra);
   };
 
-  const handleAdd = (item) =>
-    navigation.navigate('EditItems', { addedItem: item, listObj });
+  const handleAdd = (item) => {
+    const selectedItem = {
+      itemCode: item.itemCode,
+      name: item.name,
+      image: item.image,
+      category: item.category
+    };
+    
+    // Navigate back to EditItems with the item
+    navigation.navigate('EditItems', { 
+      listObj,
+      addedItem: selectedItem,
+      timestamp: Date.now()
+    });
+  };
     
   const handleDismiss = (code, isSupplementary = false, isAI = false) => {
     if (isSupplementary) {
@@ -329,7 +342,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   toggleButton: {
-    // Removed position relative since we're not using badge anymore
   },
   sectionTitle: {
     fontWeight: 'bold',

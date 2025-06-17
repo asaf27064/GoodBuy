@@ -5,23 +5,56 @@ const SystemMeta = require('../models/SystemMeta');
 module.exports = async function runPricePipeline() {
   await SystemMeta.findByIdAndUpdate(
     'price-refresh',
-    { $set: { lastRunStart: new Date(), lastRunOk: false } },
+    { $set: { lastRunStart: new Date(), lastRunOk: false, running: true } },
     { upsert: true }
   );
 
-    const proc = spawn('node', ['priceFetch/pipeline.js', 'update'], {
+  const proc = spawn('node', ['priceFetch/pipeline.js', 'update'], {
     cwd: path.join(__dirname, '..'),
-    stdio: 'inherit'
-    });
+    stdio: 'pipe',    // Use pipe to capture output but not block
+    detached: false   // Keep attached so it completes properly
+  });
 
-  return new Promise((resolve, reject) => {
-    proc.on('exit', async code => {
+  // Don't unref - we want to track completion
+
+  // Capture output for debugging (optional)
+  let pipelineOutput = '';
+  proc.stdout?.on('data', (data) => {
+    pipelineOutput += data.toString();
+  });
+  
+  proc.stderr?.on('data', (data) => {
+    console.error('Pipeline stderr:', data.toString());
+  });
+
+  // Handle completion asynchronously (don't block the main thread)
+  proc.on('exit', async (code) => {
+    console.log(`Pipeline finished with exit code: ${code}`);
+    if (pipelineOutput) {
+      console.log('Pipeline output (last 500 chars):', pipelineOutput.slice(-500));
+    }
+    try {
       await SystemMeta.findByIdAndUpdate(
         'price-refresh',
-        { $set: { lastRunEnd: new Date(), lastRunOk: code === 0 } }
+        { $set: { lastRunEnd: new Date(), lastRunOk: code === 0, running: false } }
       );
-      return code === 0 ? resolve() : reject(new Error(`exit ${code}`));
-    });
-    proc.on('error', reject);
+    } catch (err) {
+      console.error('Failed to update pipeline status:', err);
+    }
   });
+
+  proc.on('error', async (err) => {
+    console.error('Pipeline error:', err);
+    try {
+      await SystemMeta.findByIdAndUpdate(
+        'price-refresh',
+        { $set: { lastRunEnd: new Date(), lastRunOk: false, running: false } }
+      );
+    } catch (updateErr) {
+      console.error('Failed to update error status:', updateErr);
+    }
+  });
+
+  // Return immediately - don't wait for pipeline completion
+  return Promise.resolve();
 };
