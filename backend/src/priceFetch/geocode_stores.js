@@ -4,7 +4,7 @@ const geocodeGoogle   = require('./geocode-google');
 const geocodeOSM      = require('./geocode-util');
 const makeFingerprint = require('./fingerprint');
 const Store           = require('../models/Store');
-const pLimit          = require('p-limit').default;
+const pLimit          = require('p-limit');
 const fs              = require('fs');
 const path            = require('path');
 
