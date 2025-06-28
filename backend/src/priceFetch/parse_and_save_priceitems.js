@@ -9,6 +9,7 @@ const cluster        = require('cluster');
 const os             = require('os');
 const path           = require('path');
 const fs             = require('fs');
+const sax            = require('sax');
 const { MongoClient }= require('mongodb');
 const expat          = require('node-expat');
 
@@ -27,6 +28,40 @@ const STORE_COLL = 'stores';
 const NODES      = os.cpus().length;
 const BATCH_SIZE = 20000;
 const WRITE_OPTS = { ordered: false, writeConcern: { w: 0 } };
+
+async function extractSubChainId(filePath) {
+  return new Promise((resolve, reject) => {
+    const reader = fs.createReadStream(filePath, { encoding: 'utf8' });
+    const parser = sax.createStream(true); // strict mode
+
+    let foundTag = false;
+
+    parser.on('opentag', (node) => {
+      if (node.name === 'SubChainId') {
+        foundTag = true;
+      }
+    });
+
+    parser.on('text', (text) => {
+      if (foundTag) {
+        const subChainId = text.trim();
+        reader.destroy(); // stop reading early
+        resolve(subChainId);
+      }
+    });
+
+    parser.on('error', (err) => {
+      reader.destroy();
+      reject(err);
+    });
+
+    reader.on('error', (err) => {
+      reject(err);
+    });
+
+    reader.pipe(parser);
+  });
+}
 
 async function collectXmlFiles(dir) {
   const entries = await fs.promises.readdir(dir, { withFileTypes: true });
@@ -115,6 +150,7 @@ async function worker() {
   ]));
 
   const slice = JSON.parse(process.env.XML_SLICE || '[]');
+  console.log(slice);
   let inserted = 0;
   let batch = [];
   const pending = [];
@@ -153,8 +189,15 @@ async function worker() {
     const chainInfo = chainMap.get(chainIdRaw);
     if (!chainInfo) continue;
 
-    let subChainId = '1';
+    let subChainId = "";
+    try {
+       subChainId = parseInt(await extractSubChainId(filePath)).toString();
+    } catch (error) {
+       console.error(`Failed to extract subChainId from ${filePath}: ${error.message}`);
+    }
+    console.log(subChainId, typeof subChainId);
     let storeRef = storeMap.get(`${chainInfo.chainRef}_${subChainId}_${storeIdRaw}`);
+
     if (!storeRef) {
       for (const [k, v] of storeMap) {
         if (k.endsWith(`_${storeIdRaw}`)) {
@@ -257,7 +300,6 @@ async function worker() {
 
       parser.on('error', () => resolve());
 
-      fs.createReadStream(filePath).pipe(parser);
     });
   }
 
